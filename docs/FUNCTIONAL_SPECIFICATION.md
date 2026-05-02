@@ -1,6 +1,6 @@
 # MYNOTEPAD++ — Functional Specification Document
 
-**Version:** 1.1  
+**Version:** 1.2  
 **Date:** 2026-05-03  
 **Status:** Draft  
 **License:** GPL v3  
@@ -11,11 +11,11 @@
 
 ### 1.1 Vision
 
-MYNOTEPAD++ is a free, open-source, native text and code editor built from scratch for macOS (primary), with planned expansion to Linux, Windows, iOS, and Android. It combines the speed and simplicity of Notepad++ with the modern editing power of Sublime Text — filling the long-standing gap of a lightweight, feature-rich, free native code editor on Mac.
+MYNOTEPAD++ is a free, open-source, native text and code editor built from scratch for macOS (primary), with planned expansion to Linux, Windows, iOS, and Android. It delivers the speed and simplicity of a lightweight editor with the modern editing power of a professional code editor — filling the long-standing gap of a fast, feature-rich, free native code editor on Mac.
 
 ### 1.2 What This Is NOT
 
-- NOT a fork or copy of Notepad++ or Sublime Text
+- NOT a fork or copy of any existing editor
 - NOT an IDE (no built-in compiler, debugger, or project management)
 - NOT an Electron app — fully native on every platform
 - NO paid assets, watermarks, or copied icons/branding
@@ -23,7 +23,7 @@ MYNOTEPAD++ is a free, open-source, native text and code editor built from scrat
 ### 1.3 Target Users
 
 - Developers who want a fast, lightweight editor on Mac
-- Former Notepad++ users who switched to macOS
+- Users migrating from Windows/Linux who need a powerful Mac-native editor
 - Students and hobbyists who need a free, capable code editor
 - System administrators editing config files and logs
 - Writers who need a distraction-free plain text environment
@@ -106,61 +106,100 @@ All toolbar icons will use:
 
 ### 3.1 Feature Matrix
 
-Features are categorized by source inspiration and priority.
+Features are categorized by priority. All features are original implementations designed from scratch.
 
-| # | Feature | Inspired By | Priority | MVP |
-|---|---------|-------------|----------|-----|
-| 1 | Multi-tab editing | Both | P0 | Yes |
-| 2 | Syntax highlighting (50+ languages) | Both | P0 | Yes |
-| 3 | Vertical split view | Sublime | P0 | Yes |
-| 4 | Horizontal split view | Sublime | P0 | Yes |
-| 5 | Smart keyboard shortcuts | Sublime | P0 | Yes |
-| 6 | Auto-save | Original | P0 | Yes |
-| 7 | Scroll to top / bottom / middle | Original | P0 | Yes |
-| 8 | Multi-cursor editing | Sublime | P0 | Yes |
-| 9 | Command Palette | Sublime | P0 | Yes |
-| 10 | Goto Anything (file/symbol/line) | Sublime | P0 | Yes |
-| 11 | Find & Replace (regex) | Both | P0 | Yes |
-| 12 | Minimap (code preview sidebar) | Sublime | P1 | Yes |
-| 13 | Dark/Light mode | Both | P0 | Yes |
-| 14 | Line numbers + code folding | Both | P0 | Yes |
-| 15 | Encoding support (UTF-8, UTF-16, etc.) | Notepad++ | P0 | Yes |
-| 16 | Distraction-free mode | Sublime | P1 | Yes |
-| 17 | Snippet system with tab triggers | Sublime | P1 | Yes |
-| 18 | Column/block editing | Both | P1 | Yes |
-| 19 | Find in files (multi-file search) | Both | P0 | Yes |
-| 20 | Indent guides + bracket matching | Both | P0 | Yes |
-| 21 | Word wrap toggle | Both | P0 | Yes |
-| 22 | Zoom in/out (font size) | Both | P0 | Yes |
-| 23 | Line operations (sort, deduplicate, join) | Notepad++ | P1 | Yes |
-| 24 | Auto-indent + smart indent | Both | P0 | Yes |
-| 25 | Drag-and-drop file opening | Both | P0 | Yes |
-| 26 | Session restore (reopen last files) | Both | P0 | Yes |
-| 27 | Project/workspace support | Sublime | P1 | Yes |
-| 28 | File tree sidebar | Sublime | P1 | Yes |
-| 29 | Code folding (tree-sitter based) | Both | P0 | Yes |
-| 30 | Auto-closing brackets & quotes | Both | P0 | Yes |
-| 31 | Auto-indent & smart indent (tree-sitter) | Both | P0 | Yes |
-| 32 | Tab size auto-detection | Sublime | P0 | Yes |
-| 33 | .editorconfig support | VS Code | P0 | Yes |
-| 34 | Go to Definition (tree-sitter + heuristic) | Both | P0 | Yes |
-| 35 | Open file at line from terminal | Both | P0 | Yes |
-| 36 | Bracket pair colorization | VS Code | P0 | Yes |
-| 37 | Git gutter (inline diff markers) | Sublime | P1 | Yes |
-| 38 | Sticky scroll (scope headers) | VS Code | P1 | Yes |
-| 39 | Snippet system with tab triggers | Sublime | P1 | Yes |
-| 40 | Project/workspace support | Sublime | P1 | Yes |
-| 41 | Column/block editing (detailed) | Both | P1 | Yes |
+| # | Feature | Priority | MVP |
+|---|---------|----------|-----|
+| 1 | Multi-tab editing | P0 | Yes |
+| 2 | Syntax highlighting (50+ languages) | P0 | Yes |
+| 3 | Vertical split view | P0 | Yes |
+| 4 | Horizontal split view | P0 | Yes |
+| 5 | Smart keyboard shortcuts (fully remappable) | P0 | Yes |
+| 6 | Auto-save (never lose data) | P0 | Yes |
+| 7 | Scroll to top / bottom / middle | P0 | Yes |
+| 8 | Multi-cursor editing | P0 | Yes |
+| 9 | Command Palette | P0 | Yes |
+| 10 | Goto Anything (file/symbol/line) | P0 | Yes |
+| 11 | Find & Replace (regex) | P0 | Yes |
+| 12 | Minimap (code preview sidebar) | P1 | Yes |
+| 13 | Dark/Light mode | P0 | Yes |
+| 14 | Line numbers + code folding | P0 | Yes |
+| 15 | Encoding support (UTF-8, UTF-16, etc.) | P0 | Yes |
+| 16 | Distraction-free mode | P1 | Yes |
+| 17 | Snippet system with tab triggers | P1 | Yes |
+| 18 | Column/block editing | P1 | Yes |
+| 19 | Find in files (multi-file search) | P0 | Yes |
+| 20 | Indent guides + bracket matching | P0 | Yes |
+| 21 | Word wrap toggle | P0 | Yes |
+| 22 | Zoom in/out (font size) | P0 | Yes |
+| 23 | Line operations (sort, deduplicate, join) | P1 | Yes |
+| 24 | Auto-indent + smart indent | P0 | Yes |
+| 25 | Drag-and-drop file opening | P0 | Yes |
+| 26 | Session restore (reopen last files) | P0 | Yes |
+| 27 | Project/workspace support | P1 | Yes |
+| 28 | File tree sidebar | P1 | Yes |
+| 29 | Code folding (tree-sitter based) | P0 | Yes |
+| 30 | Auto-closing brackets & quotes | P0 | Yes |
+| 31 | Auto-indent & smart indent (tree-sitter) | P0 | Yes |
+| 32 | Tab size auto-detection | P0 | Yes |
+| 33 | .editorconfig support | P0 | Yes |
+| 34 | Go to Definition (tree-sitter + heuristic) | P0 | Yes |
+| 35 | Open file at line from terminal | P0 | Yes |
+| 36 | Bracket pair colorization | P0 | Yes |
+| 37 | Git gutter (inline diff markers) | P1 | Yes |
+| 38 | Sticky scroll (scope headers) | P1 | Yes |
+| 39 | Word-based autocomplete (buffer + keywords) | P0 | Yes |
+| 40 | Current line highlight | P0 | Yes |
+| 41 | Whitespace visualization (spaces/tabs/newlines) | P0 | Yes |
+| 42 | Wrap guides / rulers at configurable columns | P0 | Yes |
+| 43 | File type auto-detection (shebang, modelines) | P0 | Yes |
+| 44 | Revert file to saved | P0 | Yes |
+| 45 | Expand/shrink selection (tree-sitter aware) | P0 | Yes |
+| 46 | Select to brackets / matching pair | P0 | Yes |
+| 47 | Transpose characters/words | P0 | Yes |
+| 48 | URL detection + Cmd+click to open | P0 | Yes |
+| 49 | Find in selection toggle | P0 | Yes |
+| 50 | Read-only / lock mode | P0 | Yes |
+| 51 | Binary file detection + warning | P0 | Yes |
+| 52 | Long line handling (column virtualization) | P0 | Yes |
+| 53 | Scroll annotations / overview ruler | P0 | Yes |
+| 54 | Smart highlighting (auto-highlight selected word occurrences) | P0 | Yes |
+| 55 | Case conversion (upper, lower, title, camelCase, snake_case) | P0 | Yes |
+| 56 | Document statistics (word/char/line count in status bar) | P0 | Yes |
+| 57 | Save Copy As (save to different path without changing active file) | P0 | Yes |
+| 58 | Convert indentation (tabs-to-spaces, spaces-to-tabs) | P0 | Yes |
+| 59 | NSTextInputClient (IME, emoji picker, dictation, CJK input) | P0 | Yes |
+| 60 | Paste and Indent (auto-adjust indent on paste) | P0 | Yes |
+| 61 | Open Recent submenu (recent files from previous sessions) | P0 | Yes |
+| 62 | New Window (`Cmd+Shift+N`) | P0 | Yes |
+| 63 | Rename file (from sidebar or Command Palette) | P0 | Yes |
+| 64 | Trim trailing/leading whitespace (manual command) | P0 | Yes |
+| 65 | Insert date/time | P0 | Yes |
 
 **v1.1 — Power Features:**
 
-| # | Feature | Inspired By | Priority | v1.1 |
-|---|---------|-------------|----------|------|
-| 29 | Macro recording & playback | Notepad++ | P1 | Yes |
-| 30 | Plugin/extension system (WASM sandbox) | Both | P1 | Yes |
-| 31 | SFTP/FTPS remote file editing | Notepad++ | P1 | Yes |
-| 32 | Diff / file comparison view | Notepad++ | P1 | Yes |
-| 33 | Accessibility (VoiceOver, TalkBack, Narrator, Orca) | Original | P0 | Yes |
+| # | Feature | Priority | v1.1 |
+|---|---------|----------|------|
+| 66 | Macro recording & playback | P1 | Yes |
+| 67 | Plugin/extension system (WASM sandbox) | P1 | Yes |
+| 68 | SFTP/FTPS remote file editing | P1 | Yes |
+| 69 | Diff / file comparison view (+ three-way merge) | P1 | Yes |
+| 70 | Accessibility (VoiceOver, TalkBack, Narrator, Orca) | P0 | Yes |
+| 71 | Integrated terminal panel (non-App-Store build only) | P1 | Yes |
+| 72 | Line bookmarks (toggle, navigate, persist) | P1 | Yes |
+| 73 | Clipboard history / ring | P1 | Yes |
+| 74 | Outline view / symbol tree sidebar | P1 | Yes |
+| 75 | Breadcrumbs bar (file path + symbol) | P1 | Yes |
+| 76 | Markdown preview (side-by-side, live) | P1 | Yes |
+| 77 | Git blame / inline annotate | P1 | Yes |
+| 78 | Compare with any git commit | P1 | Yes |
+| 79 | Hex editor mode (read-only) | P1 | Yes |
+| 80 | Print support (syntax highlighted) | P1 | Yes |
+| 81 | Character inspector / Unicode info | P1 | Yes |
+| 82 | Spell checking (dictionary-based, squiggly underlines) | P1 | Yes |
+| 83 | File monitoring / tail mode (live-watch log files) | P1 | Yes |
+| 84 | Always-on-top window toggle | P1 | Yes |
+| 85 | Plugin repository browser (search, install, update from editor) | P1 | Yes |
 
 **Deferred to v2.0+:**
 
@@ -170,6 +209,14 @@ Features are categorized by source inspiration and priority.
 | Remote file browser (SFTP directory listing) | v1.1 supports open-by-path; browser is a UX enhancement |
 | Scriptable macros (Lua/JS) | v1.1 has keystroke recording; scripting requires embedding a runtime |
 | Plugin UI injection | v1.1 plugins register commands only; custom UI requires layout negotiation |
+| LSP support (optional language servers) | Tree-sitter heuristic sufficient for v1; LSP adds hover docs, real go-to-def, rename, code actions |
+| Emmet (HTML/CSS expansion) | Can be delivered as plugin |
+| Color picker / inline color preview | CSS color swatches and native color picker |
+| Auto-update mechanism (Sparkle on macOS) | Requires update server infrastructure |
+| Integrated source control panel | Full stage/commit/push/pull UI beyond gutter markers |
+| Task runner / build system integration | Run build/test commands with error parsing |
+| Language-specific formatters | JSON pretty-print, XML prettify, SQL format (or plugin) |
+| Editable hex editor | Read-only hex view in v1.1; edit mode in v2.0 |
 
 ---
 
@@ -199,7 +246,8 @@ The tab bar is the primary navigation surface for open documents.
 | Tab tear-off | Drag tab out to create new window |
 | Tab context menu | Close, Close Others, Close All, Close to the Right, Copy Path, Reveal in Finder |
 | Tab duplicate | Open same file in new tab (linked or independent) |
-| New tab | `Cmd+N` creates empty tab; `Cmd+T` opens Goto Anything |
+| New tab | `Cmd+N` creates empty tab named "Untitled-N"; `Cmd+T` opens Goto Anything |
+| Untitled naming | Name is "Untitled-N" where N is the **first available number** starting from 1. If Untitled-1 and Untitled-3 exist, next new tab is Untitled-2 (fills the gap). If 1,2,3 all exist, next is Untitled-4. Numbering persists across session restore. |
 | Close tab | `Cmd+W`; if auto-save enabled (default): save silently + close instantly. If auto-save disabled + untitled file: prompt Save As. Never prompt for named files. |
 | Cycle tabs | `Ctrl+Tab` / `Ctrl+Shift+Tab` (MRU order) |
 | Jump to tab | `Cmd+1` through `Cmd+9` for first 9 tabs |
@@ -241,7 +289,7 @@ SINGLE (default)         VERTICAL SPLIT           HORIZONTAL SPLIT
 | Resize panes | Drag divider with mouse; minimum pane width 200px |
 | Move file between panes | Drag tab from one pane to another |
 | Same file in multiple panes | Supported — edits sync in real-time |
-| Close pane | Close all tabs in pane, or `Cmd+Shift+W` |
+| Close pane | Close all tabs in focused pane: `Cmd+K, Cmd+W` (chord) |
 | Focus pane | `Cmd+Option+Arrow` to move focus between panes |
 | Independent scroll | Each pane scrolls independently |
 | Independent cursor | Each pane has its own cursor position |
@@ -257,7 +305,7 @@ Quick scroll commands for navigating large files without losing context.
 |--------|----------|----------|
 | Scroll to top of file | `Cmd+Home` or `Cmd+Up` (with fn) | Cursor moves to line 1, column 1 |
 | Scroll to bottom of file | `Cmd+End` or `Cmd+Down` (with fn) | Cursor moves to last line |
-| Scroll to middle of file | `Cmd+Shift+M` | Cursor moves to line `totalLines / 2` |
+| Scroll to middle of file | Via Command Palette "Go to Middle" | Cursor moves to line `totalLines / 2` |
 | Center current line on screen | `Ctrl+L` | Scrolls view so cursor line is vertically centered |
 | Scroll up (no cursor move) | `Ctrl+Up` | View scrolls up 1 line; cursor stays |
 | Scroll down (no cursor move) | `Ctrl+Down` | View scrolls down 1 line; cursor stays |
@@ -304,7 +352,7 @@ All shortcuts follow macOS conventions (`Cmd` instead of `Ctrl`). Every shortcut
 | Select all | `Cmd+A` |
 | Select line | `Cmd+L` |
 | Select word | `Cmd+D` (also adds next occurrence to multi-cursor) |
-| Select all occurrences | `Cmd+Shift+D` |
+| Select all occurrences | `Cmd+Ctrl+G` |
 | Duplicate line | `Cmd+Shift+Down` |
 | Delete line | `Cmd+Shift+K` |
 | Move line up | `Option+Up` |
@@ -316,7 +364,7 @@ All shortcuts follow macOS conventions (`Cmd` instead of `Ctrl`). Every shortcut
 | Join lines | `Cmd+J` |
 | Uppercase | `Cmd+K, Cmd+U` (chord) |
 | Lowercase | `Cmd+K, Cmd+L` (chord) |
-| Sort lines | `Cmd+Shift+L` (via Command Palette) |
+| Sort lines | Via Command Palette only |
 
 #### 4.4.3 Multi-Cursor & Selection
 
@@ -339,7 +387,7 @@ All shortcuts follow macOS conventions (`Cmd` instead of `Ctrl`). Every shortcut
 | Command Palette | `Cmd+Shift+P` |
 | Goto line | `Ctrl+G` |
 | Goto symbol | `Cmd+R` |
-| Goto symbol in project | `Cmd+Shift+R` |
+| Goto symbol in project | `Cmd+T` |
 | Go to definition | `Cmd+Click` or `F12` |
 | Go back | `Ctrl+-` |
 | Go forward | `Ctrl+Shift+-` |
@@ -359,10 +407,10 @@ All shortcuts follow macOS conventions (`Cmd` instead of `Ctrl`). Every shortcut
 | Grid layout (2x2) | `Cmd+Option+\` |
 | Single pane | `Cmd+Option+1` |
 | Distraction-free mode | `Cmd+Ctrl+F` |
-| Full screen | `Cmd+Ctrl+F` (native macOS) or `Fn+F` |
+| Full screen | `Fn+F` (native macOS globe key) |
 | Zoom in | `Cmd+=` |
 | Zoom out | `Cmd+-` |
-| Reset zoom | `Cmd+0` |
+| Reset zoom | `Cmd+Shift+0` |
 | Toggle word wrap | `Option+Z` |
 | Toggle line numbers | Via Command Palette |
 | Toggle invisible characters | Via Command Palette |
@@ -391,7 +439,7 @@ All shortcuts follow macOS conventions (`Cmd` instead of `Ctrl`). Every shortcut
   "bindings": [
     {
       "key": "cmd+shift+m",
-      "command": "editor.scrollToMiddle",
+      "command": "editor.toggleMinimap",
       "when": "editorFocus"
     },
     {
@@ -409,6 +457,178 @@ All shortcuts follow macOS conventions (`Cmd` instead of `Ctrl`). Every shortcut
 - Import/export keybinding profiles
 - Preset profiles: "Sublime Text", "VS Code", "Notepad++", "Vim", "Emacs" mappings
 
+#### 4.4.8 Complete Menu Bar Structure
+
+The menu bar follows Apple HIG: app menu, standard menus, Window (required), Help (required, rightmost).
+
+**MYNOTEPAD++ (App Menu):**
+- About MYNOTEPAD++
+- Check for Updates...
+- ---
+- Settings... (`Cmd+,`)
+- ---
+- Services (macOS auto-injected)
+- Hide MYNOTEPAD++ (`Cmd+H`)
+- Hide Others (`Cmd+Option+H`)
+- Show All
+- ---
+- Quit MYNOTEPAD++ (`Cmd+Q`)
+
+**File:**
+- New (`Cmd+N`)
+- New Window (`Cmd+Shift+N`)
+- ---
+- Open... (`Cmd+O`)
+- Open Folder... (`Cmd+Shift+O`)
+- Open Recent > (recent files list + "Clear Menu")
+- ---
+- Reopen with Encoding > (UTF-8, UTF-8 BOM, UTF-16 LE, UTF-16 BE, Shift-JIS, ISO-8859-1, Windows-1252, ...)
+- ---
+- Save (`Cmd+S`)
+- Save As... (`Cmd+Shift+S`)
+- Save Copy As...
+- Save All (`Cmd+Option+S`)
+- Save with Encoding > (same list as Reopen)
+- ---
+- Revert to Saved
+- Rename...
+- ---
+- Close Tab (`Cmd+W`)
+- Close Window (`Cmd+Shift+W`)
+- Close All Tabs (`Cmd+Option+W`)
+- Reopen Closed Tab (`Cmd+Shift+T`)
+- ---
+- Print... (`Cmd+P` — only when print panel is available; otherwise reserved for Goto Anything)
+
+**Edit:**
+- Undo (`Cmd+Z`)
+- Redo (`Cmd+Shift+Z`)
+- ---
+- Cut (`Cmd+X`)
+- Copy (`Cmd+C`)
+- Paste (`Cmd+V`)
+- Paste and Indent (`Cmd+Shift+V`)
+- Delete
+- Select All (`Cmd+A`)
+- ---
+- Convert Case > UPPERCASE (`Cmd+K, Cmd+U`) | lowercase (`Cmd+K, Cmd+L`) | Title Case | camelCase | snake_case | PascalCase | kebab-case | CONSTANT_CASE
+- ---
+- Line Operations > Duplicate Line (`Cmd+Shift+Down`) | Delete Line (`Cmd+Shift+K`) | Move Up (`Option+Up`) | Move Down (`Option+Down`) | Join Lines (`Cmd+J`) | Sort Lines Ascending | Sort Lines Descending | Remove Duplicate Lines | Reverse Lines | Shuffle Lines
+- ---
+- Comment > Toggle Comment (`Cmd+/`) | Toggle Block Comment (`Cmd+Shift+/`)
+- ---
+- Indent > Indent (`Cmd+]`) | Outdent (`Cmd+[`) | Convert Indentation to Spaces | Convert Indentation to Tabs
+- ---
+- Blank Operations > Trim Trailing Whitespace | Trim Leading Whitespace | Trim Both
+- ---
+- Insert > Date/Time Short | Date/Time Long
+- ---
+- Transpose Characters (`Ctrl+T`)
+- Transpose Words (`Ctrl+Option+T`)
+
+**Selection:**
+- Select Line (`Cmd+L`)
+- Select Word / Next Occurrence (`Cmd+D`)
+- Skip Occurrence (`Cmd+K, Cmd+D`)
+- Select All Occurrences (`Cmd+Ctrl+G`)
+- ---
+- Expand Selection (`Ctrl+Shift+Space`)
+- Shrink Selection (`Ctrl+Shift+Backspace`)
+- Select to Brackets (`Ctrl+Shift+M`)
+- ---
+- Split Selection into Lines (`Cmd+Shift+L`)
+- Add Cursor Above (`Cmd+Option+Up`)
+- Add Cursor Below (`Cmd+Option+Down`)
+- ---
+- Single Cursor (`Esc`)
+
+**Find:**
+- Find... (`Cmd+F`)
+- Find and Replace... (`Cmd+Option+F`)
+- Find in Files... (`Cmd+Shift+F`)
+- ---
+- Find Next (`Cmd+G`)
+- Find Previous (`Cmd+Shift+G`)
+- Use Selection for Find (`Cmd+E`)
+- ---
+- Next Search Result (`F4`)
+- Previous Search Result (`Shift+F4`)
+- ---
+- Go to Matching Bracket (`Ctrl+M`)
+
+**View:**
+- Sidebar (`Cmd+B`)
+- Minimap (`Cmd+Shift+M`)
+- Breadcrumbs (toggle)
+- ---
+- Syntax > (submenu: Plain Text, C, C++, Python, Rust, JavaScript, TypeScript, ... all supported languages alphabetically)
+- ---
+- Line Endings > Unix (LF) | Windows (CRLF) | Legacy Mac (CR)
+- ---
+- Indentation > Indent Using Spaces | Indent Using Tabs | Tab Width: 2 | 4 | 8 | Detect Indentation
+- ---
+- Code Folding > Fold (`Cmd+Option+[`) | Unfold (`Cmd+Option+]`) | Fold All (`Cmd+K, Cmd+0`) | Unfold All (`Cmd+K, Cmd+J`) | Fold Level 1-5
+- ---
+- Word Wrap (`Option+Z`)
+- Word Wrap Column > Off | Viewport | 80 | 100 | 120 | Custom...
+- ---
+- Show Whitespace > None | Selection | Trailing | All
+- Show Line Numbers (toggle)
+- Show Indent Guides (toggle)
+- Sticky Scroll (toggle)
+- ---
+- Layout > Single (`Cmd+Option+1`) | 2 Columns (`Cmd+\`) | 2 Rows (`Cmd+Shift+\`) | Grid (`Cmd+Option+\`) | 3 Columns
+- ---
+- Distraction-Free Mode (`Cmd+Ctrl+F`)
+- Full Screen (`Fn+F`)
+- Always on Top (toggle)
+- ---
+- Zoom In (`Cmd+=`) | Zoom Out (`Cmd+-`) | Reset Zoom (`Cmd+Shift+0`)
+
+**Go:**
+- Goto Anything... (`Cmd+P`)
+- Command Palette... (`Cmd+Shift+P`)
+- Goto Line... (`Ctrl+G`)
+- Goto Symbol... (`Cmd+R`)
+- Goto Symbol in Project... (`Cmd+T`)
+- Go to Definition (`F12`)
+- ---
+- Go Back (`Ctrl+-`)
+- Go Forward (`Ctrl+Shift+-`)
+- ---
+- Bookmarks > Toggle Bookmark (`Cmd+F2`) | Next Bookmark (`F2`) | Previous Bookmark (`Shift+F2`) | Clear All Bookmarks (`Cmd+Shift+F2`)
+- ---
+- Next Tab (`Ctrl+Tab`)
+- Previous Tab (`Ctrl+Shift+Tab`)
+- ---
+- Scroll > Scroll to Top | Scroll to Bottom | Center Current Line (`Ctrl+L`)
+
+**Macro:**
+- Start/Stop Recording (`Cmd+Shift+R`)
+- Play Last Macro (`Cmd+Shift+E`)
+- Play Macro N Times...
+- Save Macro...
+- ---
+- (List of saved macros with assigned shortcuts)
+
+**Window:**
+- Minimize (`Cmd+M`)
+- Zoom
+- ---
+- Bring All to Front
+- ---
+- (List of open windows — macOS auto-managed)
+
+**Help:**
+- MYNOTEPAD++ Help (opens documentation)
+- Keyboard Shortcuts Reference
+- ---
+- Report Issue... (opens GitHub issues)
+- ---
+- Release Notes (opens CHANGELOG)
+- ---
+- About MYNOTEPAD++ (also in app menu)
+
 ### 4.5 Auto-Save
 
 Auto-save eliminates data loss without user intervention.
@@ -422,7 +642,7 @@ Auto-save eliminates data loss without user intervention.
 | Timer interval | 30 seconds | 5s — 300s (configurable) |
 | Save delay after typing stops | 1 second | 0.5s — 10s (configurable) |
 | Save on window close | `true` | `true` / `false` |
-| Save unnamed files | To temp dir | Temp dir path configurable |
+| Save unnamed files | To recovery directory | `<config-dir>/recovery/` (auto-managed) |
 | Hot exit (save session on quit) | `true` | `true` / `false` |
 
 **Auto-Save Rules:**
@@ -441,14 +661,18 @@ When the app quits (even without saving), all open tabs, cursor positions, scrol
 ```
 Platform-specific config directory:
   macOS:   ~/Library/Application Support/mynotepadpp/
-  Linux:   $XDG_CONFIG_HOME/mynotepadpp/ (~/.config/ fallback)
+  Linux:   $XDG_DATA_HOME/mynotepadpp/ (~/.local/share/ fallback) for sessions/backups
+           $XDG_CONFIG_HOME/mynotepadpp/ (~/.config/ fallback) for settings/macros/snippets
   Windows: %APPDATA%\mynotepadpp\
   iOS:     App container Documents/
   Android: App-internal storage
 
 Directory structure (same on all platforms):
 <config-dir>/
-├── recovery/
+├── backups/                  ← Continuous backup (500ms debounce, survives SIGKILL)
+│   └── {doc_id}/
+│       └── {timestamp}.backup
+├── recovery/                 ← Tier-3 auto-save fallback (disk full, permission denied)
 │   ├── untitled-2026-05-03-143022.txt
 │   └── untitled-2026-05-03-150145.rs
 ├── sessions/
@@ -1108,7 +1332,182 @@ Tab-trigger expandable code templates. **P1.**
 | Tab | Inserts tab/spaces at all column cursors |
 | Undo | Entire column operation = single undo group |
 
-### 4.32 Crash Recovery
+### 4.32 Word-Based Autocomplete
+
+Basic completion without LSP. **P0 — every editor has this.**
+
+| Feature | Specification |
+|---------|--------------|
+| Word completion | Scan current buffer for words; suggest as user types (3+ chars or `Ctrl+Space`) |
+| Keyword completion | Language keywords from tree-sitter grammar (`fn`, `struct`, `impl` for Rust, `def`, `class` for Python) |
+| Path completion | Complete file paths when typing inside string literals or import statements |
+| Popup | Inline dropdown below cursor; arrow keys to navigate, Tab/Enter to accept, Esc to dismiss |
+| Ranking | Exact prefix > fuzzy match > distance from cursor. Recently used words ranked higher. |
+| Performance | Completion list computed on rayon pool, debounced 50ms. Never blocks typing. |
+| Scope | Current file only for v1.0. Project-wide word index for v1.1. |
+
+### 4.33 Current Line Highlight
+
+Subtle background highlight on the active cursor line. **P0 — table stakes.**
+
+| Feature | Specification |
+|---------|--------------|
+| Default | Enabled |
+| Style | Subtle background color change (theme-defined). Not a border. |
+| Multi-cursor | Each cursor's line is highlighted |
+| Toggle | Preferences → Editor → Highlight Active Line |
+
+### 4.34 Whitespace Visualization
+
+Render invisible characters visually. **P0 — setting exists in preferences but needs rendering spec.**
+
+| Character | Glyph | When Shown |
+|-----------|-------|------------|
+| Space | Center dot `·` | Based on `renderWhitespace` setting |
+| Tab | Right arrow `→` spanning tab width | Based on setting |
+| Newline | Pilcrow `¶` or return symbol `↵` | Only in `all` mode |
+| Trailing whitespace | Red/pink background highlight | Always in `trailing` and `all` modes |
+
+**`renderWhitespace` options:** `none`, `selection` (default), `trailing`, `boundary` (leading/trailing only), `all`
+
+### 4.35 Wrap Guides / Rulers
+
+Visual vertical lines at configurable column positions. **P0.**
+
+| Feature | Specification |
+|---------|--------------|
+| Default | One ruler at column 80 (configurable) |
+| Multiple rulers | Support array: `[80, 120]` draws two lines |
+| Soft wrap at column | `wordWrap: "column"` wraps at the first ruler position |
+| Wrap modes | `off` (no wrap), `viewport` (wrap at window edge), `column` (wrap at ruler) |
+| Appearance | Thin vertical line, semi-transparent, theme-colored |
+
+### 4.36 File Type Auto-Detection
+
+Detect language from file content when extension is missing or ambiguous. **P0.**
+
+| Method | Priority | Example |
+|--------|----------|---------|
+| File extension | 1 (highest) | `.rs` → Rust |
+| Shebang line | 2 | `#!/usr/bin/env python3` → Python |
+| Vim modeline | 3 | `# vim: set ft=python` → Python |
+| Emacs modeline | 3 | `-*- mode: python -*-` → Python |
+| Content heuristic | 4 | `<?xml` → XML, `<!DOCTYPE html>` → HTML |
+| `.editorconfig` | 5 | Not for language, but for indent/encoding |
+
+### 4.37 Revert File to Saved
+
+Discard all unsaved changes and reload from disk. **P0.**
+
+| Feature | Specification |
+|---------|--------------|
+| Access | `File > Revert File` or Command Palette "Revert File to Saved" |
+| Confirmation | If buffer is modified: "Revert [filename]? All unsaved changes will be lost." [Revert] [Cancel] |
+| Undo | Revert is itself an undo group — `Cmd+Z` restores the pre-revert state |
+| Unmodified files | No-op (greyed out in menu) |
+
+### 4.38 Expand / Shrink Selection (Tree-Sitter Aware)
+
+Progressively expand selection along syntax tree nodes. **P0 — killer feature with tree-sitter.**
+
+| Action | Shortcut | Behavior |
+|--------|----------|----------|
+| Expand | `Ctrl+Shift+Space` | word → token → expression → statement → block → function → class → file |
+| Shrink | `Ctrl+Shift+Backspace` | Reverse of expand |
+| Source | Tree-sitter syntax tree node hierarchy — accurate for all 50+ languages |
+
+### 4.39 Select to Brackets / Matching Pair
+
+Select content between matching brackets/quotes. **P0.**
+
+| Action | Shortcut | Behavior |
+|--------|----------|----------|
+| Select inner | `Ctrl+Shift+M` | Select content between nearest enclosing `()`, `[]`, `{}`, or quotes |
+| Press again | `Ctrl+Shift+M` | Expand to include the brackets/quotes themselves |
+| Go to matching | `Ctrl+M` | Jump cursor to the matching bracket |
+
+### 4.40 Transpose
+
+Swap characters, words, or lines. **P0.**
+
+| Action | Shortcut |
+|--------|----------|
+| Transpose characters | `Ctrl+T` — swap char before and after cursor |
+| Transpose words | `Ctrl+Option+T` — swap word before and after cursor |
+| Transpose lines | Already covered by Move Line Up/Down |
+
+### 4.41 URL Detection & Clickable Links
+
+Detect URLs in text and make them interactive. **P0.**
+
+| Feature | Specification |
+|---------|--------------|
+| Detection | Regex for `http://`, `https://`, `ftp://`, `file://` URLs |
+| Visual | Underline on hover (not always) |
+| Action | `Cmd+Click` opens URL in default browser |
+| File paths | Detect absolute file paths; `Cmd+Click` opens in editor |
+| Toggle | Preferences → Editor → Clickable URLs (default: on) |
+
+### 4.42 Find in Selection
+
+Constrain find/replace to the current selection. **P0.**
+
+| Feature | Specification |
+|---------|--------------|
+| Toggle | Button in find bar (icon: selection with magnifying glass) |
+| Shortcut | `Cmd+L` while find bar is open |
+| Behavior | When enabled, Find/Replace only operates within the selected region |
+| Counter | "3 of 14 matches (in selection)" |
+
+### 4.43 Read-Only / Lock Mode
+
+Prevent accidental edits. **P0.**
+
+| Feature | Specification |
+|---------|--------------|
+| Toggle | Command Palette → "Toggle Read-Only Mode" |
+| Visual | Lock icon (🔒) on tab; status bar shows "READ-ONLY" |
+| Behavior | All edit operations rejected (insert, delete, paste). Navigation works. |
+| Auto-detect | Files without write permission open as read-only automatically |
+
+### 4.44 Binary File Detection
+
+Prevent crashes when opening non-text files. **P0.**
+
+| Feature | Specification |
+|---------|--------------|
+| Detection | Scan first 8KB for null bytes (`0x00`) and magic byte signatures |
+| Threshold | If > 0.1% null bytes in first 8KB → binary |
+| Action | Show message: "This file appears to be binary." [Open as Text] [Open in Default App] [Cancel] |
+| Magic bytes | Detect: PNG, JPEG, GIF, PDF, ZIP, ELF, Mach-O, PE/COFF |
+
+### 4.45 Long Line Handling
+
+Prevent hangs when opening files with extremely long lines (minified JS/CSS). **P0.**
+
+| Feature | Specification |
+|---------|--------------|
+| Detection | Lines > 10,000 characters detected at load time |
+| Warning | Status bar: "File contains very long lines. Some features may be slower." |
+| Viewport culling | Only compute layout for visible columns ± overdraw (not entire line) |
+| Syntax limit | Syntax highlighting limited to visible column range + 500 chars each side |
+| Word wrap | Lazy wrap computation — only for visible viewport region |
+| Soft limit | Lines > 500,000 chars: disable syntax highlighting for that line |
+
+### 4.46 Scroll Annotations / Overview Ruler
+
+Visual markers on the scrollbar track. **P0 (spec existed in 4.3 but not formalized).**
+
+| Marker | Color | Source |
+|--------|-------|--------|
+| Search matches | Orange ticks | Active find operation |
+| Modified lines | Yellow ticks | Unsaved changes vs. last save |
+| Git changes | Green/red ticks | Added/deleted vs. git HEAD |
+| Errors/warnings | Red/yellow ticks | (Future: diagnostics) |
+| Current cursor | Blue indicator | Always visible |
+| Bookmarks | Blue ticks | (v1.1: line bookmarks) |
+
+### 4.47 Crash Recovery
 
 **Detailed specification for what survives a crash.**
 
@@ -1118,8 +1517,8 @@ Tab-trigger expandable code templates. **P1.**
 | File contents (unsaved named files) | Yes | Auto-save writes to disk continuously |
 | File contents (untitled files) | Yes | Written to `recovery/` directory by auto-save |
 | Open tab list | Yes | SQLite WAL journal survives crash |
-| Cursor positions | Yes | Written to SQLite on every significant cursor move (debounced 2s) |
-| Scroll positions | Yes | Written to SQLite with cursor positions |
+| Cursor positions | Yes | Batched in-memory, flushed to SQLite every 5 seconds |
+| Scroll positions | Yes | Batched with cursor positions (flushed every 5 seconds) |
 | Undo history | **No** | Undo history is in-memory only; too expensive to persist continuously |
 | Unsaved preferences | **No** | Preferences are saved immediately on change, so this is rarely an issue |
 
@@ -1129,6 +1528,172 @@ Tab-trigger expandable code templates. **P1.**
 
 **Safe mode:** If the app crashes 3 times in a row within 60 seconds, launch with all plugins disabled and a minimal theme. Show: "Started in safe mode due to repeated crashes."
 
+### 4.48 Save Behavior (Detailed)
+
+**`Cmd+S` (Save):**
+
+| Scenario | Behavior |
+|----------|----------|
+| Named file (already saved once) | Save silently to same path. No dialog. No confirmation. Modified indicator (●) clears. |
+| Untitled file (never saved) | Opens `NSSavePanel` (Save As dialog). Default filename: the tab's current name (e.g., "Untitled-3"). Default extension: based on current syntax (`.py` for Python, `.rs` for Rust, no extension for Plain Text). Default location: last-used directory, or project root if in project, or `~/Documents/` as fallback. |
+| Read-only file | Shows error: "Cannot save: file is read-only." Option to Save As to a different location. |
+
+**`Cmd+Shift+S` (Save As):**
+- Always opens `NSSavePanel` regardless of file state.
+- Pre-fills current filename and extension.
+- After saving: the tab SWITCHES to the new path. The old path is no longer associated with this tab. The old file retains its last-saved content on disk.
+
+**`Cmd+Option+S` (Save All):**
+- Saves ALL modified tabs silently.
+- Skips read-only tabs (no error, just skip).
+- Untitled tabs: auto-saved to recovery directory (NOT prompted for Save As — that would interrupt the user).
+- Feedback: brief status bar message "All files saved" for 2 seconds.
+
+**Save Copy As** (Feature #57):
+- `File > Save Copy As...` — opens `NSSavePanel`.
+- Saves to new path WITHOUT changing the active tab's association. The original file remains open and active.
+- Use case: create a backup or copy without disrupting the current editing session.
+
+**NSSavePanel File Type Filter:**
+- macOS: no file type dropdown filter (native macOS convention — user types full filename with extension).
+- If current syntax is set, the panel suggests the corresponding default extension when the user has not typed one.
+- Extension enforcement: if user types a filename without extension, append the default extension from current syntax. If syntax is Plain Text, append `.txt` (safe default — user can delete it if they want no extension).
+- If user explicitly types a different extension (e.g., types `data.csv` while syntax is Plain Text), respect the user's choice — do NOT override.
+
+**Default extension per syntax (Save As dialog):**
+
+| Syntax | Default Extension | Notes |
+|--------|------------------|-------|
+| Plain Text | `.txt` | Safe default for new files |
+| C | `.c` | |
+| C++ | `.cpp` | |
+| Rust | `.rs` | |
+| Python | `.py` | |
+| JavaScript | `.js` | |
+| TypeScript | `.ts` | |
+| HTML | `.html` | |
+| CSS | `.css` | |
+| JSON | `.json` | |
+| XML | `.xml` | |
+| YAML | `.yaml` | |
+| TOML | `.toml` | |
+| SQL | `.sql` | |
+| CSV | `.csv` | User must set syntax to CSV first |
+| Markdown | `.md` | |
+| Shell (Bash) | `.sh` | |
+| Zsh | `.zsh` | |
+| Fish | `.fish` | |
+| PowerShell | `.ps1` | |
+| Batch | `.bat` | |
+| Ruby | `.rb` | |
+| PHP | `.php` | |
+| Go | `.go` | |
+| Java | `.java` | |
+| Kotlin | `.kt` | |
+| Swift | `.swift` | |
+| Scala | `.scala` | |
+| Lua | `.lua` | |
+| Perl | `.pl` | |
+| R | `.r` | |
+| LaTeX | `.tex` | |
+| Dockerfile | `Dockerfile` | No extension |
+| Makefile | `Makefile` | No extension |
+| (all other syntaxes) | (first extension from that syntax's definition) | |
+
+**macOS-specific shell scripts:** `.command` files (macOS double-clickable shell scripts) are recognized as Shell syntax when opened. To save as `.command`, the user types the full filename with `.command` extension in the Save dialog.
+
+### 4.49 File Handling Edge Cases
+
+| Scenario | Behavior |
+|----------|----------|
+| **Open file already open in another tab** | Switch to the existing tab. Do NOT open a duplicate. |
+| **Open file already open in another window** | Open in the requesting window (files can be open in multiple windows simultaneously — they share the same buffer via the core). |
+| **Two files with same name in different directories** | Tab displays: `filename.ext — parent_dir/`. E.g., `main.rs — src/` and `main.rs — tests/`. Show enough path to disambiguate. |
+| **File deleted on disk while open** | Show non-blocking banner: "File has been deleted from disk." Tab title adds "(deleted)" suffix. The buffer remains editable. Save will recreate the file. |
+| **File becomes read-only on disk while open** | On next save attempt: show error with option to Save As. If auto-save is running, auto-save skips this file and shows status bar warning. |
+| **Symbolic links** | Follow symlinks — edit the target file, not the link. For duplicate-tab detection, resolve symlinks before comparing paths. |
+| **File permissions on save** | Preserve original file permissions (mode bits) on atomic save. Copy permissions from original before rename. |
+| **File ownership on save** | Atomic rename preserves ownership (same filesystem). Cross-filesystem save may change ownership — document this in user-facing error. |
+| **Extended attributes (xattrs) on save** | Preserve extended attributes (Finder tags, quarantine flags) from original file. Copy xattrs before atomic rename. |
+| **Maximum file size** | No hard limit. Files > 1GB: progressive loading with warning in status bar. Files > 10GB: show confirmation "This file is very large. Opening may use significant memory." |
+| **Very large paste (>10MB clipboard)** | Paste on background thread with progress indicator. Never block UI. Entire paste = single undo group. |
+| **Auto-reload preference** | Settings → Files → "Auto-reload externally changed files": `ask` (default, shows prompt), `always` (reload silently), `never` (ignore external changes). |
+
+### 4.50 Smart Highlighting (Auto-Highlight Selected Word)
+
+Automatically highlight all occurrences of the selected word/text in the document without opening Find. **P0.**
+
+| Feature | Specification |
+|---------|--------------|
+| Trigger | Select a word (double-click or `Cmd+D`) or make a text selection |
+| Behavior | All matching occurrences in the visible viewport highlighted with subtle background color (distinct from Find highlight) |
+| Match mode | Case-sensitive, whole-word when a single word is selected. Exact substring when multi-word selection. |
+| Performance | Computed on main thread for visible viewport only (debounced 100ms). Not a full-document search. |
+| Scroll annotations | Ticks on scrollbar for all matches (same as search matches but different color) |
+| Toggle | Settings → Editor → Smart Highlighting (default: on) |
+| Relationship to Find | Independent of Find & Replace. Find highlights are orange; smart highlights are a softer color per theme. Both can coexist. |
+
+### 4.51 Case Conversion Commands
+
+Text transformation commands accessible via Command Palette and keyboard. **P0.**
+
+| Command | Access |
+|---------|--------|
+| UPPERCASE | `Cmd+K, Cmd+U` (chord) |
+| lowercase | `Cmd+K, Cmd+L` (chord) |
+| Title Case | Command Palette → "Transform to Title Case" |
+| camelCase | Command Palette → "Transform to camelCase" |
+| snake_case | Command Palette → "Transform to snake_case" |
+| PascalCase | Command Palette → "Transform to PascalCase" |
+| kebab-case | Command Palette → "Transform to kebab-case" |
+| CONSTANT_CASE | Command Palette → "Transform to CONSTANT_CASE" |
+
+All commands operate on the current selection. With multi-cursor, applies to each selection independently. Single undo group.
+
+### 4.52 Document Statistics
+
+Display document metrics in the status bar. **P0.**
+
+| Metric | Where | When |
+|--------|-------|------|
+| Line count | Status bar (always) | `Ln X of Y` format |
+| Word count | Status bar (on selection) | "N words selected" or total word count via Command Palette |
+| Character count | Status bar (on selection) | "N chars selected" |
+| Selection count | Status bar (when multi-cursor) | "N selections" |
+| Full statistics | Command Palette → "Document Statistics" | Dialog showing: total lines, total words, total characters, total characters (no spaces), file size on disk |
+
+### 4.53 Convert Indentation
+
+Bulk convert existing indentation in a document. **P0.**
+
+| Command | Access | Behavior |
+|---------|--------|----------|
+| Convert Indentation to Spaces | Command Palette | Replace all leading tabs with spaces (using current tab size) |
+| Convert Indentation to Tabs | Command Palette | Replace all leading spaces (in multiples of tab size) with tabs |
+| Detect Indentation | Command Palette | Re-run tab size auto-detection (section 4.22) |
+
+### 4.54 NSTextInputClient (Input Method Support)
+
+The custom EditorView MUST support all macOS input methods. **P0 — without this, CJK input, emoji, and dictation are completely broken.**
+
+| Feature | Requirement |
+|---------|-------------|
+| IME composition (CJK) | Implement `NSTextInputClient` protocol: `setMarkedText`, `markedRange`, `selectedRange`, `attributedSubstring`, `insertText`, `firstRect(forCharacterRange:)`, `characterIndex(for:)` |
+| Emoji picker | `Cmd+Ctrl+Space` must work — opens system emoji picker, inserts selected emoji at cursor |
+| Dictation | System dictation (Fn Fn or menu) must insert dictated text at cursor |
+| Text replacement | System text replacement (Settings → Keyboard → Text) must expand abbreviations |
+| Marked text rendering | IME composition text shown inline with underline, distinct from committed text |
+| Candidate window positioning | `firstRect(forCharacterRange:)` must return accurate screen coordinates so IME candidate window appears next to cursor |
+
+### 4.55 Editing Behavior Edge Cases
+
+| Scenario | Behavior |
+|----------|----------|
+| **Cursor at wrapped line boundary** | Down/Up arrow moves to the next/previous **visual** line (within the same logical line). `Cmd+Down/Up` moves to next/previous logical line. This follows macOS text editing convention. |
+| **Selection across folded regions** | Folded content IS included in the selection. Copy/cut includes the hidden lines. The fold indicator shows selection extends through it. |
+| **Type while folded region is selected** | Replaces the entire folded region (including hidden content) with typed text. Same as typing over any selection. |
+| **CJK word boundaries** | Use ICU word boundary detection for `Option+Left/Right` (word movement) and `Cmd+D` (word selection). ICU handles Chinese/Japanese segmentation correctly. CoreText provides this via `CTTypesetterSuggestLineBreak`. |
+
 ---
 
 ## 5. USER INTERFACE LAYOUT
@@ -1137,7 +1702,7 @@ Tab-trigger expandable code templates. **P1.**
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│  MYNOTEPAD++    File  Edit  Selection  Find  View  Go  Preferences  │  ← Menu Bar
+│  MYNOTEPAD++  File  Edit  Selection  Find  View  Go  Macro  Window  Help │ ← Menu Bar
 ├────────────────┬─────────────────────────────────────────────────────┤
 │                │ [main.rs ×] [lib.rs ●] [config.toml ×] [+]        │  ← Tab Bar
 │  EXPLORER      ├─────────────────────────────────────────────┬──────┤
@@ -1238,18 +1803,57 @@ Dual-mode settings:
 
 ## 7. PERFORMANCE TARGETS
 
-| Metric | Target |
-|--------|--------|
-| Cold startup | < 500ms to first editor frame |
-| Open 1MB file | < 200ms |
-| Open 100MB file | < 2 seconds (progressive rendering) |
-| Open 1GB file | < 10 seconds (streaming, not full load) |
-| Keystroke latency | < 16ms (60 FPS) |
-| Scroll FPS | 60 FPS minimum |
-| Search (10K files) | < 3 seconds |
-| Memory (idle, 1 file) | < 50MB |
-| Memory (50 tabs) | < 300MB |
-| Auto-save write | < 50ms (background thread) |
+### 7.1 Core Metrics
+
+| Metric | Target | Verification |
+|--------|--------|-------------|
+| Cold startup | < 500ms to first editor frame | `time open MyNotepadPP.app` |
+| Warm startup (session restore) | Active tab visible < 200ms, remaining tabs progressive | Instruments Time Profiler |
+| Open 1MB file | < 200ms to first render | Benchmark |
+| Open 100MB file | < 2s (progressive: first screen < 200ms) | Benchmark |
+| Open 1GB file | < 10s (streaming, first screen < 200ms) | Benchmark |
+| Open file with 1MB single line (minified JS) | < 3s, no hang | Benchmark with minified React bundle |
+| Keystroke latency | < 16ms (60 FPS) | Instruments |
+| Scroll FPS | 60 FPS minimum on M4 | Instruments Core Animation |
+| Search (10K files, literal) | < 2 seconds | Benchmark on real project |
+| Search (10K files, regex) | < 5 seconds | Benchmark |
+| Autocomplete popup | < 50ms after debounce | Instruments |
+| Memory (idle, 1 file) | < 50MB | Activity Monitor |
+| Memory (50 tabs, mixed files) | < 300MB (global budget enforced) | Activity Monitor |
+| Auto-save write (< 100KB file) | < 50ms (background, never blocks UI) | Benchmark |
+| Auto-save write (> 1MB file) | < 100ms (F_FULLFSYNC on macOS adds 10-50ms) | Benchmark |
+| Hot exit (50 tabs) | < 500ms total | Benchmark |
+| Tab switch | < 30ms (including session state read) | Instruments |
+| Syntax highlight after edit | < 50ms for visible viewport | Instruments |
+| File watcher response | < 500ms from disk change to UI update | Manual test |
+
+### 7.2 Zero-Hang Guarantees
+
+These are **hard requirements** — violations are P0 bugs:
+
+| Scenario | Guarantee |
+|----------|-----------|
+| Cmd+Q (quit) | Terminate within 3 seconds. No dialog. No hang. |
+| Cmd+W (close tab) | Close within 50ms. No dialog (auto-save enabled). |
+| System shutdown / SIGTERM | Save + terminate within 5 seconds. |
+| SIGKILL / Force Quit | Max 500ms of data loss (continuous backup covers rest). |
+| Network filesystem stall | I/O operations timeout at 30 seconds. UI never freezes. |
+| Opening 1GB file | UI responsive immediately. Loading in background. |
+| Find in 100K files | Cancellable. UI responsive during search. |
+| Disk full during save | Non-blocking notification. Buffer preserved in memory. |
+| Auto-save on focus lost | Complete within 100ms or defer to background. |
+
+### 7.3 Startup Waterfall
+
+```
+T+0ms     Show window frame (empty, from cached XIB)
+T+50ms    Load last active tab metadata from SQLite
+T+100ms   Begin loading last active tab's file content
+T+200ms   First screen of active tab rendered (plain text)
+T+300ms   Syntax highlighting applied to visible viewport
+T+500ms   Remaining tab metadata loaded, tab bar populated
+T+1000ms  Background: index remaining open files, build syntax trees
+```
 
 ---
 
@@ -1317,14 +1921,64 @@ Status bar changes must be announced to screen readers without requiring focus:
 
 | Category | Extensions |
 |----------|-----------|
-| Plain text | `.txt`, `.text`, `.log` |
-| Source code | `.rs`, `.swift`, `.py`, `.js`, `.ts`, `.java`, `.c`, `.cpp`, `.h`, `.go`, `.rb`, `.php`, `.cs`, `.kt`, `.scala`, `.dart`, `.lua`, `.pl`, `.r`, `.m`, `.zig`, `.ex`, `.exs`, `.hs`, `.clj` |
-| Web | `.html`, `.htm`, `.css`, `.scss`, `.less`, `.jsx`, `.tsx`, `.vue`, `.svelte` |
-| Data/Config | `.json`, `.yaml`, `.yml`, `.toml`, `.xml`, `.csv`, `.tsv`, `.ini`, `.cfg`, `.conf`, `.env`, `.properties` |
-| Shell | `.sh`, `.bash`, `.zsh`, `.fish`, `.ps1`, `.bat`, `.cmd` |
-| Build | `Makefile`, `CMakeLists.txt`, `Cargo.toml`, `package.json`, `build.gradle`, `.sln`, `.csproj` |
-| Docs | `.md`, `.rst`, `.tex`, `.adoc` |
+| Plain text | `.txt`, `.text`, `.log`, `.err` |
+| C/C++ | `.c`, `.cc`, `.cpp`, `.cxx`, `.h`, `.hh`, `.hpp`, `.hxx`, `.ino` |
+| Rust | `.rs` |
+| Go | `.go` |
+| Zig | `.zig` |
+| Assembly | `.asm`, `.s`, `.S` |
+| D | `.d` |
+| Swift | `.swift` |
+| Objective-C | `.m`, `.mm` |
+| Java/JVM | `.java`, `.jsp`, `.groovy`, `.gradle` |
+| Kotlin | `.kt`, `.kts` |
+| Scala | `.scala`, `.sc` |
+| C# | `.cs` |
+| Python | `.py`, `.pyw`, `.pyx`, `.pxd`, `.pxi`, `.pyi` |
+| Ruby | `.rb`, `.rbw`, `.rake`, `.gemspec`, `Rakefile`, `Gemfile` |
+| PHP | `.php`, `.php3`, `.php4`, `.php5`, `.phtml` |
+| Perl | `.pl`, `.pm`, `.plx`, `.t` |
+| Lua | `.lua` |
+| JavaScript | `.js`, `.mjs`, `.cjs`, `.jsx` |
+| TypeScript | `.ts`, `.tsx` |
+| CoffeeScript | `.coffee`, `.litcoffee` |
+| Web markup | `.html`, `.htm`, `.shtml`, `.xhtml`, `.xht`, `.hta` |
+| CSS | `.css`, `.scss`, `.less` |
+| Frameworks | `.vue`, `.svelte` |
+| JSON | `.json`, `.json5`, `.jsonc` |
+| YAML | `.yaml`, `.yml` |
+| TOML | `.toml` |
+| XML | `.xml`, `.xsl`, `.xslt`, `.xsd`, `.svg`, `.kml`, `.plist`, `.xaml`, `.wsdl` |
+| SQL | `.sql`, `.tsql` |
+| Data | `.csv`, `.tsv` |
+| Config | `.ini`, `.cfg`, `.conf`, `.env`, `.properties`, `.editorconfig`, `.gitconfig` |
+| Shell | `.sh`, `.bash`, `.zsh`, `.fish`, `.command` |
+| PowerShell | `.ps1`, `.psm1`, `.psd1` |
+| Batch | `.bat`, `.cmd` |
+| Build | `Makefile`, `.mak`, `.mk`, `CMakeLists.txt`, `Cargo.toml`, `package.json`, `build.gradle`, `.sln`, `.csproj`, `.vcxproj` |
+| Docs | `.md`, `.markdown`, `.rst`, `.tex`, `.adoc`, `.textile` |
 | DevOps | `Dockerfile`, `.dockerignore`, `.gitignore`, `.gitattributes`, `Jenkinsfile`, `.github/workflows/*.yml` |
+| IaC / Cloud | `.tf`, `.tfvars`, `.proto`, `.graphql`, `.gql` |
+| Haskell | `.hs`, `.lhs` |
+| Elixir | `.ex`, `.exs` |
+| Clojure | `.clj`, `.cljs`, `.cljc`, `.edn` |
+| Erlang | `.erl`, `.hrl` |
+| OCaml | `.ml`, `.mli` |
+| Lisp/Scheme | `.lisp`, `.lsp`, `.el`, `.scm`, `.ss` |
+| R | `.r`, `.R` |
+| Julia | `.jl` |
+| Nim | `.nim` |
+| Dart | `.dart` |
+| Pascal | `.pas`, `.pp`, `.dpr` |
+| Fortran | `.f`, `.f90`, `.f95`, `.for` |
+| TCL | `.tcl` |
+| Ada | `.ada`, `.ads`, `.adb` |
+| HDL | `.v`, `.sv`, `.vh`, `.svh`, `.vhd`, `.vhdl` |
+| Visual Basic | `.vb`, `.vbs` |
+| AppleScript | `.applescript`, `.scpt` |
+| Diff/Patch | `.diff`, `.patch` |
+| Regex | `.regexp` |
+| Registry | `.reg` |
 
 ### 9.2 Binary Files
 
@@ -1401,7 +2055,7 @@ All icons below will be custom-designed SVG originals. No paid or third-party ic
 
 **Design rules for file icons:**
 - Each icon uses a distinct shape + the primary color from the language's unofficial color identity (e.g., Rust = orange, Python = blue/yellow) but redrawn originally
-- All icons are original vector art — NOT copied from VS Code, JetBrains, or any icon pack
+- All icons are original vector art — NOT copied from any existing editor or icon pack
 - Licensed under GPL v3 as part of the project
 
 ---
@@ -1443,25 +2097,44 @@ All themes are original creations, not ported from other editors.
 - Multi-tab editing, split views, scroll navigation
 - Command Palette + Goto Anything
 - Multi-cursor editing
-- Find & Replace with regex + Find in Files
-- Auto-save + hot exit + session restore
-- 50+ language syntax highlighting
+- Find & Replace with regex + Find in Files + Find in Selection
+- Auto-save + hot exit + session restore + continuous backup
+- 50+ language syntax highlighting with embedded language support
+- Word-based autocomplete (buffer + keywords + path completion)
+- Current line highlight, whitespace visualization, wrap guides/rulers
+- File type auto-detection (shebang, modelines, content heuristics)
+- Expand/shrink selection, select to brackets, transpose, Go to Matching Bracket
+- URL detection + clickable links, read-only mode, revert to saved
+- Binary file detection, long line handling (column virtualization)
+- Scroll annotations / overview ruler
 - 5 dark + 5 light original themes
 - Original branding and icons
 - Full VoiceOver accessibility (macOS)
 - High-contrast + color-blind themes
 - macOS native: menu bar, keyboard shortcuts (Cmd), Finder integration, Spotlight, dark mode
 - Hardened Runtime + App Sandbox + notarization-ready
+- Zero-hang guarantees: no prompt on close/quit, no freeze on large files or network FS
 
-**Exit criteria**: All P0 features working, all `cargo test` + XCTest + XCUITest passing, VoiceOver tested manually, 60 FPS scrolling on M4, < 500ms cold startup. **No other platform work begins until v1.0 is shipped.**
+**Exit criteria**: All P0 features working, all `cargo test` + XCTest + XCUITest passing, VoiceOver tested manually, 60 FPS scrolling on M4, < 500ms cold startup, zero-hang scenarios verified. **No other platform work begins until v1.0 is shipped.**
 
 ### v1.1 — Power Features (macOS ONLY — same "ship then move on" rule)
 
 - P1 features: minimap, distraction-free mode, snippets, file tree sidebar, project/workspace support
-- **Macro recording & playback** (keystroke recording, save, assign shortcut) — Sections 4.15
+- **Macro recording & playback** (keystroke recording, save, assign shortcut) — Section 4.15
 - **Plugin system** (WASM sandbox, command registration, event hooks) — Section 4.16
 - **SFTP/FTPS remote file editing** (secure protocols only, opt-in, no remote browser) — Section 4.17
-- **Diff / file comparison view** (side-by-side, inline, word-level) — Section 4.18
+- **Diff / file comparison view** (side-by-side, inline, word-level, three-way merge) — Section 4.18
+- **Integrated terminal** panel (bottom, multiple instances, shell integration)
+- **Line bookmarks** (toggle, navigate, persist in session)
+- **Clipboard history / ring** (last 20 entries, in-memory)
+- **Outline view / symbol tree** sidebar panel (tree-sitter powered)
+- **Breadcrumbs bar** (file path + symbol hierarchy)
+- **Markdown preview** (side-by-side, live, GFM support)
+- **Git blame / annotate** (inline per-line, hover for commit details)
+- **Compare with any git commit** (not just HEAD)
+- **Hex editor mode** (read-only view of binary files)
+- **Print support** (syntax highlighted, headers, line numbers)
+- **Character inspector** (Unicode codepoint, UTF-8 bytes at cursor)
 - Performance optimization for very large files (1GB+)
 - Additional themes + theme editor
 - Keybinding preset profiles (Sublime, VS Code, Notepad++, Vim, Emacs)
@@ -1496,18 +2169,80 @@ Each platform release includes:
 
 ## 13. LEGAL CHECKLIST
 
+### 13.1 Intellectual Property
+
 | Item | Status | Notes |
 |------|--------|-------|
 | Name "MYNOTEPAD++" is original | Verified | Does not infringe on "Notepad++" trademark |
-| All code written from scratch | Required | No code copied from Notepad++, Sublime, VS Code, or any editor |
+| All code written from scratch | Required | No code copied from any existing editor — fully original |
 | All icons are original SVG art | Required | Created in Inkscape/Figma free tier |
 | No paid stock images | Required | Zero watermarked or licensed assets |
 | No copied UI designs | Required | Inspired by, not copied from |
-| GPL v3 license | Chosen | All contributors must agree |
 | Font usage | System fonts only | SF Mono (Apple), no bundled proprietary fonts |
+| Trademark filing | Planned | File for "MYNOTEPAD++" name and logo |
+
+### 13.2 Licensing
+
+| Item | Status | Notes |
+|------|--------|-------|
+| GPL v3 license | Chosen | All source code, all platforms |
+| GPL v3 Section 7 App Store exception | **Required** | Additional permission allowing distribution via Apple/Google/Microsoft stores despite DRM restrictions |
+| CLA (Contributor License Agreement) | **Required** | All contributors assign copyright or grant relicensing rights — prevents VLC-scenario App Store removal |
+| License text bundled in app | **Required** | In-app About/Help menu displays full GPL v3 text. LICENSE file in every app bundle/package. |
+| Source code link in app | **Required** | About screen shows repo URL. App Store descriptions include repo link. |
+| Git tag = shipped version | **Required** | Source at each git tag MUST correspond to the binary shipped to stores |
 | Tree-sitter grammars | MIT licensed | Compatible with GPL v3 |
-| Rust crates | Audit for license compatibility | All must be GPL v3 / MIT / Apache 2.0 compatible |
-| App Store guidelines | Review before submission | iOS/macOS App Store allow GPL v3 with caveats |
+| Rust crates | Audit for compatibility | All must be GPL v3 / MIT / Apache 2.0 compatible. `cargo deny` in CI. |
+| Plugin license enforcement | Required | Plugins must declare GPL-v3-compatible license in manifest; non-compatible rejected at install |
+
+### 13.3 App Store Compliance
+
+| Item | Platform | Status | Notes |
+|------|----------|--------|-------|
+| Apple Developer Program enrollment | macOS/iOS | Required | $99/yr for notarization + App Store |
+| Google Play Developer enrollment | Android | Required | $25 one-time |
+| Privacy manifest (`PrivacyInfo.xcprivacy`) | macOS/iOS | **Required since May 2024** | Declare Required Reason APIs (file timestamps, disk space, boot time, UserDefaults) |
+| Privacy policy URL | All stores | **Required** | Even with zero data collection. Host at stable URL. |
+| Age rating (IARC questionnaire) | All stores | Required | Text editor = 4+ (Apple) / Everyone (Google) |
+| App Sandbox enabled | macOS | Required for Mac App Store | File access via Open/Save panels + security-scoped bookmarks |
+| Hardened Runtime + notarization | macOS | Required | For both App Store and direct distribution (.dmg) |
+| Code signing | macOS/iOS/Windows | Required | Development cert (local), distribution cert (release) |
+| MSIX signing | Windows | Required for Microsoft Store | Code signing certificate |
+| F-Droid reproducible build | Android | Required for F-Droid | Entire build (including Rust core) from source |
+| No proprietary dependencies for F-Droid | Android | Required | No Google Play Services, no Firebase |
+| Document browser integration | iOS | Required | `UIDocumentPickerViewController` for file access |
+| `LSSupportsOpeningDocumentsInPlace` | iOS | Required | Edit files in-place from Files app |
+
+### 13.4 Store Metadata Checklist (per platform)
+
+| Asset | macOS App Store | iOS App Store | Google Play | Microsoft Store |
+|-------|----------------|---------------|-------------|-----------------|
+| App icon | 1024x1024 `.icns` | 1024x1024 PNG (no alpha) | 512x512 PNG | 300x300 PNG |
+| Screenshots | 1280x800 or 1440x900 | 6.7" + 5.5" + iPad 12.9" | Phone (required) + tablet | 1366x768 minimum |
+| Feature graphic | — | — | 1024x500 PNG | — |
+| App preview (video) | Optional (15-30s) | Optional | Optional | Optional |
+| Description | 4000 chars | 4000 chars | 4000 chars | 10000 chars |
+| Keywords | 100 chars total | 100 chars total | — (indexed from description) | — |
+| Category | Developer Tools | Developer Tools | Productivity | Developer Tools |
+| Copyright notice | Required | Required | — | — |
+| Support URL | Required | Required | Email required | Required |
+| "What's New" text | Required for updates | Required for updates | 500 chars | Required |
+
+### 13.5 Version Management for Stores
+
+| Platform | Marketing Version | Build Number | CI Automation |
+|----------|------------------|-------------|---------------|
+| macOS/iOS | `CFBundleShortVersionString` = git tag (`1.1.0`) | `CFBundleVersion` = `${{ github.run_number }}` (must strictly increase) | Xcode build settings from CI env |
+| Android | `versionName` = git tag (`"1.1.0"`) | `versionCode` = `MAJOR*10000 + MINOR*100 + PATCH` (must strictly increase) | `build.gradle.kts` computes from tag |
+| Windows | MSIX `Version` = `1.1.0.0` (fourth part always 0) | — | `.csproj` reads from CI |
+| Linux | Flatpak release tag = git tag | — | Flathub manifest auto-updates |
+
+**Release process:**
+1. Update `CHANGELOG.md` with version entry
+2. Bump version in `core/Cargo.toml` and platform version files
+3. Create git tag (e.g., `macos-v1.1.0`)
+4. CI builds, signs, notarizes, and uploads to stores
+5. Git tag source MUST match shipped binary (GPL v3 compliance)
 
 ---
 
