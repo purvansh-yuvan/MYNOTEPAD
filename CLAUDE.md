@@ -435,7 +435,7 @@ No server-side database. Local storage only:
 - All access through a single abstraction (Rust core or platform service)
 - **Concurrent access**: single writer, multiple readers. Use connection pooling or serialize writes via a dedicated background thread
 - **Transaction discipline**: batch related writes in a single transaction (e.g., saving session state = one transaction for all tabs)
-- **Crash recovery**: SQLite WAL + `PRAGMA synchronous=NORMAL` — journal survives app crash; on next launch, SQLite auto-recovers
+- **Crash recovery**: SQLite WAL + `PRAGMA synchronous=FULL` + `PRAGMA fullfsync=ON` — journal survives app crash and power loss; on next launch, SQLite auto-recovers
 - **Data validation on read**: never trust stored data blindly — validate schema version on open, handle missing/corrupt columns gracefully with defaults
 - **Migration path**: increment `user_version` on schema change; include `ALTER TABLE` migration in code that runs on startup if version mismatch detected
 
@@ -730,7 +730,7 @@ Tier 3: Recovery directory write
 - **Incremental syntax parsing**: tree-sitter `edit()` + `parse()` on change, not full reparse. Parse on rayon pool (HIGH priority lane). 30ms debounce after edit. Each parse result carries a revision number matching its rope snapshot — discard stale results. Cancel-and-restart on new edit during parse.
 - **Embedded language parsing**: tree-sitter language injection for HTML+JS+CSS, Markdown+code blocks. Orchestration: identify language ranges from parent grammar, parse each range with appropriate sub-grammar.
 - **Syntax highlighting priority**: visible viewport first → ±1 screen overdraw → rest of file. Cancel pending highlights if user scrolls.
-- **Search**: `memchr` crate for literal byte search, `regex-automata` (not `regex`) for regex with lazy DFA construction, `rayon` for multi-file parallelism. Use `ignore` crate for `.gitignore`-aware file walking. Incremental in-file search: as user types, refine previous results. Stream results to UI batched per-file with 16ms flush timer. Cache compiled regex patterns (LRU, last 50). For unopened files: mmap for zero-copy scanning.
+- **Search**: `memchr` crate for literal byte search, `regex-automata` (not `regex`) for regex with lazy DFA construction, `rayon` for multi-file parallelism. Use `ignore` crate for `.gitignore`-aware file walking. Incremental in-file search: as user types, refine previous results. Stream results to UI batched per-file with 16ms flush timer. Cache compiled regex patterns (LRU, last 50). For unopened files: `BufReader` with 64KB chunks (no mmap — SIGBUS risk per file loading rules).
 - **Binary file detection**: scan first 8KB for null bytes (>0.1% = binary) + magic byte signatures (PNG, JPEG, PDF, ZIP, ELF, Mach-O). Show warning, don't attempt syntax highlight.
 - Symbol indexing: tree-sitter `symbols` query on background thread. Index built lazily per-file on first Goto Symbol. Incremental update on file edit.
 - Undo/redo: with copy-on-write rope, undo can be a **stack of rope snapshots** (each shares >99% of nodes via `Arc`). Undo is O(1) — swap pointer. Keep operation grouping for macro playback / replace-all.
@@ -838,7 +838,7 @@ PRAGMA wal_checkpoint(TRUNCATE);      -- minimize DB file size
 
 ### File Handle Cleanup
 - **FSEvents watcher**: remove file paths from watch list on tab close. Remove project root from watch list on project close. Call `FSEventStreamStop` + `FSEventStreamInvalidate` when stream is no longer needed.
-- **Security-scoped bookmarks**: `startAccessingSecurityScopedResource()` balanced with `stopAccessingSecurityScopedResource()` on tab close. Reference-count per directory (start on first file in dir, stop on last file close). Kernel limit ~256 active accesses — exceed this and ALL file access fails.
+- **Security-scoped bookmarks**: `startAccessingSecurityScopedResource()` balanced with `stopAccessingSecurityScopedResource()` on tab close. Reference-count per directory (start on first file in dir, stop on last file close). Kernel limit ~250 active accesses (conservative estimate; observed range 256-2500 but use 250 as safe ceiling) — exceed this and ALL file access fails.
 - **Temp file cleanup**: on startup, scan recovery/backup dirs, delete temp files whose PID is not running. On successful atomic save, temp file is renamed (no orphan). On crash, temp files persist — cleaned up on next launch.
 
 ### Cache Purge Under Memory Pressure

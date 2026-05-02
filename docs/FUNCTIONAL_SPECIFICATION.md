@@ -338,7 +338,7 @@ All shortcuts follow macOS conventions (`Cmd` instead of `Ctrl`). Every shortcut
 | Close window | `Cmd+Shift+W` |
 | Close all tabs | `Cmd+Option+W` |
 | Reopen closed tab | `Cmd+Shift+T` |
-| Print | `Cmd+Shift+P+R` (chord) or via File menu — `Cmd+P` is reserved for Goto Anything |
+| Print | Via File menu only (no keyboard shortcut — `Cmd+P` is reserved for Goto Anything) |
 
 #### 4.4.2 Editing
 
@@ -394,7 +394,7 @@ All shortcuts follow macOS conventions (`Cmd` instead of `Ctrl`). Every shortcut
 | Next tab | `Ctrl+Tab` |
 | Previous tab | `Ctrl+Shift+Tab` |
 | Focus sidebar | `Cmd+0` |
-| Focus editor | `Cmd+1` through `Cmd+9` |
+| Jump to tab N | `Cmd+1` through `Cmd+9` (same as section 4.1 tab jump) |
 
 #### 4.4.5 View & Layout
 
@@ -498,7 +498,7 @@ The menu bar follows Apple HIG: app menu, standard menus, Window (required), Hel
 - Close All Tabs (`Cmd+Option+W`)
 - Reopen Closed Tab (`Cmd+Shift+T`)
 - ---
-- Print... (`Cmd+P` — only when print panel is available; otherwise reserved for Goto Anything)
+- Print... (no shortcut — `Cmd+P` is reserved for Goto Anything)
 
 **Edit:**
 - Undo (`Cmd+Z`)
@@ -1455,7 +1455,7 @@ Constrain find/replace to the current selection. **P0.**
 | Feature | Specification |
 |---------|--------------|
 | Toggle | Button in find bar (icon: selection with magnifying glass) |
-| Shortcut | `Cmd+L` while find bar is open |
+| Shortcut | `Cmd+L` (when: `findBarFocus` — does NOT conflict with Select Line which is `editorFocus`) |
 | Behavior | When enabled, Find/Replace only operates within the selected region |
 | Counter | "3 of 14 matches (in selection)" |
 

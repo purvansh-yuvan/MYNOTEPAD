@@ -2,7 +2,7 @@
 
 **Version:** 1.0
 **Date:** 2026-05-03
-**Covers:** v1.0 MVP (macOS only) — 53 features, all P0 + P1
+**Covers:** v1.0 MVP (macOS only) — 65 features, all P0 + P1
 **Source of truth:** `docs/FUNCTIONAL_SPECIFICATION.md` v1.2 + `CLAUDE.md`
 
 ---
@@ -325,13 +325,14 @@ Each task has:
 
 **Scope:**
 - Create `core/ffi/src/document.rs`:
-  - `document_open(path: *const c_char) -> *mut DocumentHandle` — opens file, returns opaque pointer
+  - `document_open(path_ptr: *const u8, path_len: usize) -> *mut DocumentHandle` — opens file, returns opaque pointer. **Length-delimited strings only — no `*const c_char`** (per CLAUDE.md FFI Rules).
   - `document_create() -> *mut DocumentHandle` — creates empty document
   - `document_free(handle: *mut DocumentHandle)` — frees the document
-  - `document_get_line(handle: *mut DocumentHandle, line: usize, buf: *mut u8, buf_len: usize) -> i32` — copies line content to caller buffer, returns bytes written or error
+  - `document_get_line(handle: *mut DocumentHandle, line: usize, out_ptr: *mut *const u8, out_len: *mut usize) -> FfiResult` — **Rust allocates output buffer**, returns pointer + length. Caller must call `string_free(ptr, len)` after use. No caller-allocated buffers (per CLAUDE.md FFI Rules — prevents buffer overflow on encoding expansion).
+  - `string_free(ptr: *const u8, len: usize)` — frees a Rust-allocated string buffer
   - `document_line_count(handle: *mut DocumentHandle) -> usize`
-  - `document_edit(handle: *mut DocumentHandle, start_byte: usize, end_byte: usize, text: *const c_char) -> FfiResult`
-  - `document_save(handle: *mut DocumentHandle, path: *const c_char) -> FfiResult`
+  - `document_edit(handle: *mut DocumentHandle, start_byte: usize, end_byte: usize, text_ptr: *const u8, text_len: usize) -> FfiResult`
+  - `document_save(handle: *mut DocumentHandle, path_ptr: *const u8, path_len: usize) -> FfiResult`
   - `document_undo(handle: *mut DocumentHandle) -> FfiResult`
   - `document_redo(handle: *mut DocumentHandle) -> FfiResult`
 - Every `pub extern "C"` function wrapped in `std::panic::catch_unwind` returning `FfiResult::ErrPanic` on panic
@@ -390,7 +391,7 @@ Each task has:
 - Clean exit: `PRAGMA optimize`, `PRAGMA incremental_vacuum`, `PRAGMA wal_checkpoint(TRUNCATE)`
 
 **Acceptance criteria:**
-- [ ] All 15 PRAGMAs from CLAUDE.md are set on every connection open
+- [ ] All 15 PRAGMAs from CLAUDE.md are set (14 on every connection + 1 write-only: `cache_spill`)
 - [ ] `application_id` is checked on open — wrong ID → recreate DB
 - [ ] `dirty_flag` set to 1 on open, 0 on clean exit
 - [ ] Crash simulation: kill process mid-write, reopen → DB is consistent (WAL recovery)
@@ -454,7 +455,7 @@ After all Phase 1 tasks are complete, verify:
 - Create `platforms/macos/MyNotepadPP/App/main.swift` — entry point
 - Create `platforms/macos/MyNotepadPP/Core/BridgingHeader.h` — `#include "mynotepadpp_core.h"`
 - Configure build settings per CLAUDE.md table: deployment target macOS 14.0, arm64, Hardened Runtime, App Sandbox, linker flags `-lmynotepadpp_core`, header/library search paths
-- Create entitlements file with: App Sandbox, user-selected files R/W, app-scope bookmarks, network client (for SFTP)
+- Create entitlements file with: App Sandbox, user-selected files R/W, app-scope bookmarks. **Do NOT include `network.client` in v1.0** (SFTP is v1.1). **Do NOT include `print` in v1.0** (Print is v1.1). Add these in v1.1 only.
 - Create build phases: Run Script (Cargo build), Run Script (cbindgen), Compile Sources, Link Binary, Copy Resources
 - Create `platforms/macos/MyNotepadPP/Resources/PrivacyInfo.xcprivacy` with Required Reason API declarations (file timestamps C617.1, disk space E174.1, boot time 35F9.1, UserDefaults CA92.1)
 - Create `platforms/macos/MyNotepadPPTests/` and `platforms/macos/MyNotepadPPUITests/` directories
@@ -522,6 +523,11 @@ After all Phase 1 tasks are complete, verify:
 **Scope:**
 - Create `platforms/macos/MyNotepadPP/Views/EditorView.swift` — `// CANONICAL REFERENCE` tag at top:
   - Subclass `NSView`, override `draw(_ dirtyRect:)`
+  - **NSTextInputClient (CRITICAL — Feature #59)**: MUST implement `NSTextInputClient` protocol for IME composition (CJK), emoji picker (`Cmd+Ctrl+Space`), dictation, system text replacement. Methods: `setMarkedText`, `markedRange`, `selectedRange`, `attributedSubstring`, `insertText`, `firstRect(forCharacterRange:)`, `characterIndex(for:)`. Call `inputContext?.invalidateCharacterCoordinates()` on scroll/layout change. Without this, CJK input, emoji, and dictation are completely broken.
+  - **NSWritingToolsCoordinator (macOS 15+)**: implement delegate for Writing Tools integration (AI proofreading). Provide text context, handle replacements.
+  - **Emoji glyph atlas**: separate RGBA texture atlas for Apple Color Emoji (`sbix` format bitmaps). Standard grayscale atlas does NOT work for emoji. Use `CTFontDrawGlyphs()`.
+  - **Metal drawable lifecycle**: release `CAMetalDrawable` in `MTLCommandBuffer` completion handler. Never hold across frames. Handle `contentsScale` change on display switch.
+  - **Explicit `close()` method**: called from tab-close logic to free Rust resources immediately. `deinit` is safety net only (prevents leaks from retain cycles).
   - **Text shaping**: CoreText (`CTLine`, `CTFrame`) for text shaping and glyph extraction. Handles ligatures, kerning, combining characters.
   - **Glyph atlas**: `MTLTexture`-backed atlas. Cache key: `(glyph_id, font_id, size, subpixel_offset)`. Color applied via Metal shader, not baked.
   - **Shaped text cache**: LRU cache of 10,000 entries per (content, style, font)
@@ -582,7 +588,7 @@ After all Phase 1 tasks are complete, verify:
   - `revertToSaved(document:)` — confirmation alert, then reload from disk
   - File type associations via `Info.plist` (UTI declarations for common text files)
   - Drag-and-drop: register window as drop target for file URLs
-  - URL handler: `mynotepadpp://open?file=/path&line=42&col=15`
+  - URL handler: `mynotepadpp://open?file=/path&line=42&col=15` — MUST show confirmation dialog ("Website wants to open [filename]. Allow?"). Canonicalize path, reject system dirs (`/etc/`, `/System/`), reject `..` traversal, rate-limit 1/second.
   - Recent files: `NSDocumentController.shared.noteNewRecentDocumentURL()`
 - Window title: file name (with modified indicator ●), or "Untitled"
 - Finder integration: Open With context menu, Spotlight metadata (deferred to P6)
@@ -1441,7 +1447,7 @@ After all Phase 3 tasks are complete, verify:
 
 **Goal:** Add P1 features that complete the v1.0 experience: minimap, file tree sidebar, project/workspace, snippets, distraction-free mode, git gutter, sticky scroll, column editing, line operations, Command Palette, scroll annotations, encoding/line-ending UI, preferences, themes.
 
-**Exit criteria:** All 53 features from the v1.0 feature matrix work. Feature-complete v1.0.
+**Exit criteria:** All 65 features from the v1.0 feature matrix work. Feature-complete v1.0.
 
 ---
 
@@ -1660,7 +1666,7 @@ After all Phase 3 tasks are complete, verify:
 
 ### PHASE 5 INTEGRATION CHECKPOINT
 
-1. **All 53 features from v1.0 matrix work** — manual verification of each
+1. **All 65 features from v1.0 matrix work** — manual verification of each
 2. **File tree sidebar** — shows project, opens files
 3. **Command Palette** — fuzzy search, execute commands
 4. **Minimap** — visible, clickable, shows syntax colors
@@ -1877,7 +1883,7 @@ After all Phase 3 tasks are complete, verify:
 4. GPL v3 license visible in app and store listing
 5. Source code tagged and matches shipped binary
 6. CHANGELOG.md updated
-7. All 53 features working
+7. All 65 features working
 8. All tests passing
 9. All performance targets met
 10. VoiceOver accessible
@@ -1888,7 +1894,7 @@ After all Phase 3 tasks are complete, verify:
 
 ## TASK CROSS-REFERENCE MATRIX
 
-Every feature from the v1.0 matrix (53 features) maps to at least one task:
+Every feature from the v1.0 matrix (65 features) maps to at least one task:
 
 | Feature # | Feature | Task(s) |
 |-----------|---------|---------|
