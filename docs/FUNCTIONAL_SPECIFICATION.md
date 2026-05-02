@@ -452,7 +452,7 @@ Directory structure (same on all platforms):
 │   ├── untitled-2026-05-03-143022.txt
 │   └── untitled-2026-05-03-150145.rs
 ├── sessions/
-│   └── last-session.json    ← tab state, cursor, scroll, undo
+│   └── sessions.db          ← SQLite (WAL mode): tab state, cursor, scroll, window layout
 └── settings/
     └── preferences.json
 ```
