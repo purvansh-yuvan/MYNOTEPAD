@@ -133,14 +133,14 @@ Features are categorized by priority. All features are original implementations 
 | 21 | Word wrap toggle | P0 | Yes |
 | 22 | Zoom in/out (font size) | P0 | Yes |
 | 23 | Line operations (sort, deduplicate, join) | P1 | Yes |
-| 24 | Auto-indent + smart indent | P0 | Yes |
+| 24 | Auto-indent (basic — heuristic, Enter after `{`) | P0 | Yes |
 | 25 | Drag-and-drop file opening | P0 | Yes |
 | 26 | Session restore (reopen last files) | P0 | Yes |
 | 27 | Project/workspace support | P1 | Yes |
 | 28 | File tree sidebar | P1 | Yes |
 | 29 | Code folding (tree-sitter based) | P0 | Yes |
 | 30 | Auto-closing brackets & quotes | P0 | Yes |
-| 31 | Auto-indent & smart indent (tree-sitter) | P0 | Yes |
+| 31 | Smart indent (tree-sitter enhanced — scope-aware outdent) | P0 | Yes |
 | 32 | Tab size auto-detection | P0 | Yes |
 | 33 | .editorconfig support | P0 | Yes |
 | 34 | Go to Definition (tree-sitter + heuristic) | P0 | Yes |
@@ -184,7 +184,7 @@ Features are categorized by priority. All features are original implementations 
 | 67 | Plugin/extension system (WASM sandbox) | P1 | Yes |
 | 68 | SFTP/FTPS remote file editing | P1 | Yes |
 | 69 | Diff / file comparison view (+ three-way merge) | P1 | Yes |
-| 70 | Accessibility (VoiceOver, TalkBack, Narrator, Orca) | P0 | Yes |
+| 70 | Accessibility — macOS VoiceOver (v1.0 launch requirement; TalkBack, Narrator, Orca in v2.0 with platform expansion) | P0 | v1.0 |
 | 71 | Integrated terminal panel (non-App-Store build only) | P1 | Yes |
 | 72 | Line bookmarks (toggle, navigate, persist) | P1 | Yes |
 | 73 | Clipboard history / ring | P1 | Yes |
@@ -244,9 +244,9 @@ The tab bar is the primary navigation surface for open documents.
 | Tab overflow | Scroll arrows when tabs exceed width; dropdown menu for all tabs |
 | Tab reorder | Drag-and-drop to reorder tabs |
 | Tab tear-off | Drag tab out to create new window |
-| Tab context menu | Close, Close Others, Close All, Close to the Right, Copy Path, Reveal in Finder |
+| Tab context menu | Close, Close Others, Close All, Close to the Right, Copy Path, Reveal in Finder, Open in Terminal (opens Terminal.app at file's directory) |
 | Tab duplicate | Open same file in new tab (linked or independent) |
-| New tab | `Cmd+N` creates empty tab named "Untitled-N"; `Cmd+T` opens Goto Anything |
+| New tab | `Cmd+N` creates empty tab named "Untitled-N" |
 | Untitled naming | Name is "Untitled-N" where N is the **first available number** starting from 1. If Untitled-1 and Untitled-3 exist, next new tab is Untitled-2 (fills the gap). If 1,2,3 all exist, next is Untitled-4. Numbering persists across session restore. |
 | Close tab | `Cmd+W`; if auto-save enabled (default): save silently + close instantly. If auto-save disabled + untitled file: prompt Save As. Never prompt for named files. |
 | Cycle tabs | `Ctrl+Tab` / `Ctrl+Shift+Tab` (MRU order) |
@@ -311,7 +311,7 @@ Quick scroll commands for navigating large files without losing context.
 | Scroll down (no cursor move) | `Ctrl+Down` | View scrolls down 1 line; cursor stays |
 | Page up | `Fn+Up` / `Page Up` | Scroll one viewport height up |
 | Page down | `Fn+Down` / `Page Down` | Scroll one viewport height down |
-| Scroll to specific line | `Ctrl+G` → enter line number | Jump to exact line |
+| Scroll to specific line | `Ctrl+G` → enter line number or `line:col` (e.g., `42:15`) | Jump to exact line and optionally column |
 | Scroll to percentage | Command Palette → "Go to 50%" | Jump to percentage of file |
 
 **Scroll Behavior Rules:**
@@ -337,8 +337,8 @@ All shortcuts follow macOS conventions (`Cmd` instead of `Ctrl`). Every shortcut
 | Close tab | `Cmd+W` |
 | Close window | `Cmd+Shift+W` |
 | Close all tabs | `Cmd+Option+W` |
-| Reopen closed tab | `Cmd+Shift+T` |
-| Print | Via File menu only (no keyboard shortcut — `Cmd+P` is reserved for Goto Anything) |
+| Reopen closed tab | `Cmd+Shift+T` (maintains a stack of 20 recently closed tabs with paths + cursor positions; each press pops the stack and restores the next tab) |
+| Print | `Cmd+Option+P` (note: `Cmd+P` is deliberately reassigned to Goto Anything, matching VS Code/Sublime convention for code editors. This deviates from Apple HIG `Cmd+P` = Print but is standard in developer tools. Print is also accessible via File menu.) |
 
 #### 4.4.2 Editing
 
@@ -353,7 +353,7 @@ All shortcuts follow macOS conventions (`Cmd` instead of `Ctrl`). Every shortcut
 | Select line | `Cmd+L` |
 | Select word | `Cmd+D` (also adds next occurrence to multi-cursor) |
 | Select all occurrences | `Cmd+Ctrl+G` |
-| Duplicate line | `Cmd+Shift+Down` |
+| Duplicate line | `Cmd+Shift+D` (note: `Cmd+Shift+Down` is reserved for macOS native "extend selection to end of document") |
 | Delete line | `Cmd+Shift+K` |
 | Move line up | `Option+Up` |
 | Move line down | `Option+Down` |
@@ -455,7 +455,7 @@ All shortcuts follow macOS conventions (`Cmd` instead of `Ctrl`). Every shortcut
 - Supports chord shortcuts (two-key sequences like `Cmd+K, Cmd+U`)
 - Context-aware: shortcuts can be scoped to `editorFocus`, `sidebarFocus`, `findBarFocus`, etc.
 - Import/export keybinding profiles
-- Preset profiles: "Sublime Text", "VS Code", "Notepad++", "Vim", "Emacs" mappings
+- Preset profiles: "Classic Mac" (default), "Vim-style", "Emacs-style", "Windows-style", "Linux-style" mappings (avoid using trademarked product names; profiles are layout-based, not brand-based)
 
 #### 4.4.8 Complete Menu Bar Structure
 
@@ -463,7 +463,7 @@ The menu bar follows Apple HIG: app menu, standard menus, Window (required), Hel
 
 **MYNOTEPAD++ (App Menu):**
 - About MYNOTEPAD++
-- Check for Updates...
+- Check for Updates... *(v2.0 — requires update server)*
 - ---
 - Settings... (`Cmd+,`)
 - ---
@@ -498,7 +498,7 @@ The menu bar follows Apple HIG: app menu, standard menus, Window (required), Hel
 - Close All Tabs (`Cmd+Option+W`)
 - Reopen Closed Tab (`Cmd+Shift+T`)
 - ---
-- Print... (no shortcut — `Cmd+P` is reserved for Goto Anything)
+- Print... (`Cmd+Option+P` — `Cmd+P` is reserved for Goto Anything)
 
 **Edit:**
 - Undo (`Cmd+Z`)
@@ -513,7 +513,7 @@ The menu bar follows Apple HIG: app menu, standard menus, Window (required), Hel
 - ---
 - Convert Case > UPPERCASE (`Cmd+K, Cmd+U`) | lowercase (`Cmd+K, Cmd+L`) | Title Case | camelCase | snake_case | PascalCase | kebab-case | CONSTANT_CASE
 - ---
-- Line Operations > Duplicate Line (`Cmd+Shift+Down`) | Delete Line (`Cmd+Shift+K`) | Move Up (`Option+Up`) | Move Down (`Option+Down`) | Join Lines (`Cmd+J`) | Sort Lines Ascending | Sort Lines Descending | Remove Duplicate Lines | Reverse Lines | Shuffle Lines
+- Line Operations > Duplicate Line (`Cmd+Shift+D`) | Delete Line (`Cmd+Shift+K`) | Move Up (`Option+Up`) | Move Down (`Option+Down`) | Join Lines (`Cmd+J`) | Sort Lines Ascending | Sort Lines Descending | Remove Duplicate Lines | Reverse Lines | Shuffle Lines
 - ---
 - Comment > Toggle Comment (`Cmd+/`) | Toggle Block Comment (`Cmd+Shift+/`)
 - ---
@@ -559,7 +559,7 @@ The menu bar follows Apple HIG: app menu, standard menus, Window (required), Hel
 **View:**
 - Sidebar (`Cmd+B`)
 - Minimap (`Cmd+Shift+M`)
-- Breadcrumbs (toggle)
+- Breadcrumbs (toggle) *(v1.1)*
 - ---
 - Syntax > (submenu: Plain Text, C, C++, Python, Rust, JavaScript, TypeScript, ... all supported languages alphabetically)
 - ---
@@ -581,7 +581,7 @@ The menu bar follows Apple HIG: app menu, standard menus, Window (required), Hel
 - ---
 - Distraction-Free Mode (`Cmd+Ctrl+F`)
 - Full Screen (`Fn+F`)
-- Always on Top (toggle)
+- Always on Top (toggle) *(v1.1)*
 - ---
 - Zoom In (`Cmd+=`) | Zoom Out (`Cmd+-`) | Reset Zoom (`Cmd+Shift+0`)
 
@@ -596,14 +596,14 @@ The menu bar follows Apple HIG: app menu, standard menus, Window (required), Hel
 - Go Back (`Ctrl+-`)
 - Go Forward (`Ctrl+Shift+-`)
 - ---
-- Bookmarks > Toggle Bookmark (`Cmd+F2`) | Next Bookmark (`F2`) | Previous Bookmark (`Shift+F2`) | Clear All Bookmarks (`Cmd+Shift+F2`)
+- Bookmarks > Toggle Bookmark (`Cmd+F2`) | Next Bookmark (`F2`) | Previous Bookmark (`Shift+F2`) | Clear All Bookmarks (`Cmd+Shift+F2`) *(v1.1 — hidden in v1.0)*
 - ---
 - Next Tab (`Ctrl+Tab`)
 - Previous Tab (`Ctrl+Shift+Tab`)
 - ---
 - Scroll > Scroll to Top | Scroll to Bottom | Center Current Line (`Ctrl+L`)
 
-**Macro:**
+**Macro:** *(v1.1 — menu hidden in v1.0, shown when macro system ships)*
 - Start/Stop Recording (`Cmd+Shift+R`)
 - Play Last Macro (`Cmd+Shift+E`)
 - Play Macro N Times...
@@ -857,6 +857,7 @@ Powered by **tree-sitter** for accurate, incremental parsing.
 | Git status | Color-coded: green (new), yellow (modified), red (deleted) |
 | Drag and drop | Reorder and move files/folders |
 | Multi-select | `Cmd+Click` to select multiple files |
+| Sort by | Right-click header or View menu: Sort by Name (default), Sort by Type (extension), Sort by Date Modified. Persisted per project in `project.json`. |
 
 ### 4.13 Distraction-Free Mode
 
@@ -1042,7 +1043,7 @@ Open and edit files on remote servers via secure file transfer protocols.
 
 | Feature | Specification |
 |---------|--------------|
-| Activation | File → Open Remote (`Cmd+Shift+O+R`) or Command Palette |
+| Activation | File → Open Remote (`Cmd+Option+Shift+O`) or Command Palette |
 | Authentication | SSH key (RSA, Ed25519) + ssh-agent; password (stored in native keychain) |
 | Workflow | Download to temp file → open in editor → upload on save |
 | Conflict detection | Check remote file mtime before upload; prompt if changed |
@@ -1103,7 +1104,7 @@ SIDE-BY-SIDE                                    INLINE (UNIFIED)
 | Diff summary | Status bar: "5 additions, 3 deletions, 2 modifications" |
 | Large file support | Stream-diff for files > 10MB; show first N hunks with "Load More" |
 | Gutter indicators | Green bar (added), red bar (removed), blue bar (modified) |
-| Accessibility | Diff hunks navigable by keyboard; screen reader announces "Added 2 lines after line 3" |
+| Accessibility | Diff hunks navigable by keyboard (`F7`/`Shift+F7`); each hunk exposed as an `NSAccessibilityGroup` with `accessibilityLabel` describing the change (e.g., "Added 2 lines after line 3"). Hunk navigation posts `NSAccessibilityAnnouncementNotification` for VoiceOver. Merge buttons have `accessibilityRole: .button` with descriptive labels. |
 
 ### 4.19 Code Folding
 
@@ -1190,7 +1191,7 @@ Navigate to where a symbol is defined. **P0 — has shortcut, needs implementati
 | Method | How it works |
 |--------|-------------|
 | Tree-sitter scope analysis | Find the definition node for the symbol under cursor within the same file. Works for local variables, functions, classes. |
-| Project-wide heuristic | `grep` for `fn SYMBOL`, `def SYMBOL`, `class SYMBOL`, `function SYMBOL` patterns across project files. Rank by exact match. |
+| Project-wide heuristic | Use the Rust core search engine (NOT shell `grep` — `std::process::Command` is forbidden) to regex-search for `fn SYMBOL`, `def SYMBOL`, `class SYMBOL`, `function SYMBOL` patterns across project files via `core/src/search/in_files.rs`. Rank by exact match. |
 | Navigation stack | Every Go-to-Definition pushes current position onto a stack. `Ctrl+-` pops back. `Ctrl+Shift+-` goes forward. Stack depth: 100. |
 
 **NOT LSP-based** — this editor has no language server. Tree-sitter provides 80% accuracy for same-file definitions. Cross-file is heuristic.
@@ -1403,7 +1404,7 @@ Discard all unsaved changes and reload from disk. **P0.**
 |---------|--------------|
 | Access | `File > Revert File` or Command Palette "Revert File to Saved" |
 | Confirmation | If buffer is modified: "Revert [filename]? All unsaved changes will be lost." [Revert] [Cancel] |
-| Undo | Revert is itself an undo group — `Cmd+Z` restores the pre-revert state |
+| Undo | Revert is itself an undo group — `Cmd+Z` restores the pre-revert state. Implementation: push the current `Arc<Rope>` snapshot onto the undo stack as a single entry, then replace the document's rope with the disk-loaded rope. Undo swaps back to the saved snapshot (O(1) pointer swap, no memory duplication due to Arc structural sharing). The pre-revert snapshot counts toward the 100MB undo budget. |
 | Unmodified files | No-op (greyed out in menu) |
 
 ### 4.38 Expand / Shrink Selection (Tree-Sitter Aware)
@@ -1442,7 +1443,7 @@ Detect URLs in text and make them interactive. **P0.**
 
 | Feature | Specification |
 |---------|--------------|
-| Detection | Regex for `http://`, `https://`, `ftp://`, `file://` URLs |
+| Detection | Regex for `http://`, `https://`, `file://` URLs. `ftp://` is NOT detected — plain FTP is insecure and explicitly unsupported per section 4.17. |
 | Visual | Underline on hover (not always) |
 | Action | `Cmd+Click` opens URL in default browser |
 | File paths | Detect absolute file paths; `Cmd+Click` opens in editor |
@@ -1455,7 +1456,7 @@ Constrain find/replace to the current selection. **P0.**
 | Feature | Specification |
 |---------|--------------|
 | Toggle | Button in find bar (icon: selection with magnifying glass) |
-| Shortcut | `Cmd+L` (when: `findBarFocus` — does NOT conflict with Select Line which is `editorFocus`) |
+| Shortcut | `Cmd+Shift+I` (Find in Selection toggle). Note: `Cmd+L` is reserved for Select Line in `editorFocus` context and is NOT reused here to avoid ambiguity when the find bar is open alongside a text selection. |
 | Behavior | When enabled, Find/Replace only operates within the selected region |
 | Counter | "3 of 14 matches (in selection)" |
 
@@ -1517,9 +1518,9 @@ Visual markers on the scrollbar track. **P0 (spec existed in 4.3 but not formali
 | File contents (unsaved named files) | Yes | Auto-save writes to disk continuously |
 | File contents (untitled files) | Yes | Written to `recovery/` directory by auto-save |
 | Open tab list | Yes | SQLite WAL journal survives crash |
-| Cursor positions | Yes | Batched in-memory, flushed to SQLite every 5 seconds |
-| Scroll positions | Yes | Batched with cursor positions (flushed every 5 seconds) |
-| Undo history | **No** | Undo history is in-memory only; too expensive to persist continuously |
+| Cursor positions | **Partial** | Batched in-memory, flushed to SQLite every 5 seconds. Max 5 seconds of cursor movement lost on crash. |
+| Scroll positions | **Partial** | Batched with cursor positions (flushed every 5 seconds). Max 5 seconds of scroll state lost on crash. |
+| Undo history | **Partial** | Survives clean quit (`Cmd+Q`) — hot exit serializes last 1000 ops to SQLite. Does NOT survive crash/SIGKILL (in-memory only; too expensive to persist continuously). |
 | Unsaved preferences | **No** | Preferences are saved immediately on change, so this is rarely an issue |
 
 **Crash detection:** SQLite `dirty_flag` column set to 1 on startup, 0 on clean exit. If 1 on next startup → previous session crashed → show recovery prompt.
@@ -1618,6 +1619,7 @@ Visual markers on the scrollbar track. **P0 (spec existed in 4.3 but not formali
 | **Maximum file size** | No hard limit. Files > 1GB: progressive loading with warning in status bar. Files > 10GB: show confirmation "This file is very large. Opening may use significant memory." |
 | **Very large paste (>10MB clipboard)** | Paste on background thread with progress indicator. Never block UI. Entire paste = single undo group. |
 | **Auto-reload preference** | Settings → Files → "Auto-reload externally changed files": `ask` (default, shows prompt), `always` (reload silently), `never` (ignore external changes). |
+| **Opening files inside `.git/` directory** | Show warning banner: "This file is inside a .git directory. Editing it may corrupt your repository." with [Open Anyway] [Cancel]. If user proceeds, file opens normally. Auto-save is disabled for files inside `.git/` directories to prevent accidental repository corruption. |
 
 ### 4.50 Smart Highlighting (Auto-Highlight Selected Word)
 
@@ -2119,7 +2121,8 @@ All themes are original creations, not ported from other editors.
 
 ### v1.1 — Power Features (macOS ONLY — same "ship then move on" rule)
 
-- P1 features: minimap, distraction-free mode, snippets, file tree sidebar, project/workspace support
+Note: P1 features (minimap, distraction-free mode, snippets, file tree sidebar, project/workspace support) are included in v1.0 Phase 5, NOT deferred to v1.1.
+
 - **Macro recording & playback** (keystroke recording, save, assign shortcut) — Section 4.15
 - **Plugin system** (WASM sandbox, command registration, event hooks) — Section 4.16
 - **SFTP/FTPS remote file editing** (secure protocols only, opt-in, no remote browser) — Section 4.17
@@ -2137,7 +2140,7 @@ All themes are original creations, not ported from other editors.
 - **Character inspector** (Unicode codepoint, UTF-8 bytes at cursor)
 - Performance optimization for very large files (1GB+)
 - Additional themes + theme editor
-- Keybinding preset profiles (Sublime, VS Code, Notepad++, Vim, Emacs)
+- Keybinding preset profiles ("Classic Mac", "Windows-style", "Linux-style", "Vim-style", "Emacs-style" — no trademarked product names)
 
 **Exit criteria**: All v1.1 features working on macOS, tests passing, performance benchmarks met. Only THEN begin v2.0.
 

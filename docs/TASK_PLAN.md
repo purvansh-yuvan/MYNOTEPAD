@@ -271,8 +271,9 @@ Each task has:
 **Purpose:** Every long-running background operation (search, file loading, syntax parsing, diff) MUST be cancellable and report progress. Without this, the UI freezes on large operations. Per CLAUDE.md section 4 and 5.
 
 **Scope:**
-- Already partially created in P1.T5 (`cancel.rs`, `progress.rs`). This task formalizes and tests them as standalone utilities.
-- `CancelToken` — `cancel()`, `is_cancelled()`, `clone()`. Uses `Arc<AtomicBool>` with `Ordering::Relaxed`.
+- Already created in P1.T5 (`cancel.rs`, `progress.rs`). This task adds comprehensive standalone tests, documentation, and the `TaskDispatcher` utility (per CLAUDE.md thread architecture). **This is a test + documentation + dispatcher task, not new file creation.**
+- `CancelToken` — `cancel()`, `is_cancelled()`, `clone()`. Uses `Arc<AtomicBool>` with `Ordering::Release` / `Ordering::Acquire` (NOT `Relaxed` — per CLAUDE.md CancelToken spec).
+- Create `core/src/dispatch.rs` — `TaskDispatcher` with `High`, `Normal`, `Low` priorities routing to the correct rayon pool instance (per CLAUDE.md thread architecture).
 - `Progress` — `Indeterminate(String)`, `Determinate(f64, String)`, `Complete(String)`, `Error(String)`, `Cancelled`
 - Ensure both are `Send + Sync` (required for cross-thread use)
 - Document usage pattern in doc comments: "Check `is_cancelled()` between loop iterations"
@@ -282,12 +283,15 @@ Each task has:
 - [ ] `Progress` is `Send + Sync`
 - [ ] Cancel from one thread, `is_cancelled()` returns true in another thread within 1 microsecond
 - [ ] Clone produces a shared token (cancel one, all clones see it)
+- [ ] `TaskDispatcher` routes `High` priority to the HIGH rayon pool and `Normal`/`Low` to the LOW rayon pool
+- [ ] Direct `rayon::spawn()` call (global pool) is NOT used anywhere — only `TaskDispatcher::dispatch()`
+- [ ] Both rayon pool instances have correct QoS via `pthread_set_qos_class_self_np` in their `spawn_handler`
 
 **Depends on:** P1.T1
 
 **Integrates with:** P1.T5 (search), P1.T3 (file loading), P4.T1 (syntax parsing), P4.T5 (diff)
 
-**Test requirements:** Unit tests for cross-thread cancellation, clone sharing
+**Test requirements:** Unit tests for cross-thread cancellation, clone sharing. Integration test for dispatcher routing (submit to HIGH pool, verify QoS class of executing thread).
 
 ---
 
@@ -371,7 +375,7 @@ Each task has:
 - Create `core/src/session/mod.rs`
 - Create `core/src/session/db.rs` — `SessionDb` struct:
   - `open(path: &Path) -> Result<SessionDb>` — opens/creates DB, runs PRAGMA init, checks application_id, runs migrations
-  - Full PRAGMA initialization (all 14 PRAGMAs from CLAUDE.md (13 on every connection + 1 write-only))
+  - Full PRAGMA initialization (all 15 PRAGMAs from CLAUDE.md: 14 on every connection + 1 write-only `cache_spill`)
   - Schema: `windows`, `tabs`, `unsaved_content`, `undo_history`, `plugin_state`, `app_state`, `split_views` — all STRICT tables
   - `application_id = 0x4D4E5050` ('MNPP')
 - Create `core/src/session/writer.rs` — `SessionWriter` (runs on dedicated SQLite writer thread):
@@ -593,6 +597,11 @@ After all Phase 1 tasks are complete, verify:
 - Window title: file name (with modified indicator ●), or "Untitled"
 - Finder integration: Open With context menu, Spotlight metadata (deferred to P6)
 - Status bar: bottom bar showing `Ln 1, Col 1 | Spaces: 4 | UTF-8 | LF | Plain Text`
+- **Required NSApplicationDelegate methods:**
+  - `applicationShouldHandleReopen(_:hasVisibleWindows:)` — when user clicks Dock icon with no windows open, restore session from SQLite (same as "On reopen" in CLAUDE.md section 7). Return `true` if windows were restored, `false` to let AppKit create a default window.
+  - `application(_:openFiles:)` — Finder "Open With" for multiple files. Open each file in a new tab. Call `NSApp.reply(toOpenOrPrint: .success)` on completion.
+  - `application(_:open:)` — handle `mynotepadpp://` URL scheme (already covered by URL handler above).
+  - `applicationSupportsSecureRestorableState(_:) -> Bool` — return `true`. Required since macOS 12 to suppress console warnings and enable state restoration.
 
 **Acceptance criteria:**
 - [ ] Every menu item has correct keyboard shortcut per spec
@@ -608,6 +617,9 @@ After all Phase 1 tasks are complete, verify:
 - [ ] `Cmd+W` closes (auto-save if enabled, no prompt)
 - [ ] `Cmd+Q` quits (hot exit, no prompt)
 - [ ] CLI: `./mynotepadpp file.rs:42` opens file at line 42
+- [ ] Click Dock icon with no windows → session restored from SQLite
+- [ ] Finder "Open With" on 5 files → all 5 open as tabs
+- [ ] `applicationSupportsSecureRestorableState` returns `true` — no console warnings on macOS 12+
 
 **Depends on:** P2.T2, P2.T3
 
@@ -775,6 +787,8 @@ After all Phase 2 tasks are complete, verify:
 - [ ] Delta-based: named file with 1GB unsaved changes → hot exit stores edit ops (< 10KB), not full buffer
 
 **Depends on:** P1.T9 (session DB), P3.T2 (auto-save), P3.T7 (tabs exist)
+
+**EXECUTION ORDER NOTE:** P3.T3 depends on P3.T7 (tabs). Despite numbering, **implement P3.T7 BEFORE P3.T3**. Recommended Phase 3 execution order: P3.T1 → P3.T4 → P3.T5 → P3.T6 → P3.T7 → P3.T2 → P3.T3 → P3.T8 → P3.T9.
 
 **Integrates with:** P6.T2 (shutdown hardening — iOS lifecycle, multi-window)
 
@@ -1463,7 +1477,7 @@ After all Phase 3 tasks are complete, verify:
   - Context menu: Open, Open to Side, Reveal in Finder, Copy Path, Copy Relative Path
   - Search filter: type to filter files
   - File icons per language (from icon set in section 10.3)
-  - Git status colors: green (new), yellow (modified), red (deleted) — uses git status command
+  - Git status colors: green (new), yellow (modified), red (deleted) — executes `git status` via platform layer (`Process` in Swift), NOT via Rust core (Rule #6 forbids `std::process::Command` in core). Git calls are platform-side only.
   - Drag and drop: reorder and move files/folders
   - Multi-select: `Cmd+Click`
 - File system watcher: FSEvents for project root (debounced 200ms)
@@ -1608,8 +1622,24 @@ After all Phase 3 tasks are complete, verify:
 18. **Transpose** (Feature #47, section 4.40): `Ctrl+T` characters, `Ctrl+Option+T` words.
 19. **Revert to saved** (Feature #44, section 4.37): File > Revert File, confirmation dialog, undo-able.
 20. **File type auto-detection** (Feature #43, section 4.36): Shebang, modelines, content heuristics.
+21. **Smart highlighting** (Feature #54, section 4.50): Auto-highlight all occurrences of selected word. Debounced 100ms, viewport only. Distinct from Find highlights. Toggle in Settings.
+22. **Case conversion commands** (Feature #55, section 4.51): 8 commands (UPPER, lower, Title, camelCase, snake_case, PascalCase, kebab-case, CONSTANT_CASE) via Command Palette + chord shortcuts. Multi-cursor aware. Single undo group.
+23. **Document statistics** (Feature #56, section 4.52): Word/char/line count in status bar. Selection stats on selection. Full stats dialog via Command Palette.
+24. **Convert indentation** (Feature #58, section 4.53): Tabs-to-spaces, spaces-to-tabs, detect indentation. Via Command Palette.
+25. **Trim whitespace** (Feature #64): Trim trailing, trim leading, trim both. Via Command Palette and Edit > Blank Operations menu.
+26. **Insert date/time** (Feature #65): Insert short/long date-time at cursor. Via Edit > Insert menu.
+27. **File handling edge cases** (section 4.49): All 12 edge cases — duplicate open (switch to existing tab), same-name disambiguation (`filename — parent_dir/`), file deleted on disk, file becomes read-only, symlinks (follow target), permissions/ownership/xattrs preservation on atomic save, max file size warning > 10GB, large paste (>10MB) on background thread, auto-reload preference (`ask`/`always`/`never`), .git directory edit warning (auto-save disabled for .git files).
+28. **Save behavior details** (section 4.48): NSSavePanel default extension per syntax (30+ mappings), extension enforcement, Save All behavior (skip read-only, untitled to recovery), Save Copy As (no path change).
+29. **Editing edge cases** (section 4.55): Wrapped line cursor (visual movement with arrows, logical with Cmd), selection across folds (includes hidden content), CJK word boundaries (ICU segmentation for Option+Left/Right).
 
-**Acceptance criteria per item:** Each must match its FUNCTIONAL_SPECIFICATION section exactly. All shortcuts must work. All preferences must be persisted.
+**Acceptance criteria per item:** Each must match its FUNCTIONAL_SPECIFICATION section exactly. All shortcuts must work. All preferences must be persisted. Key measurable criteria for complex sub-items:
+- [ ] **Snippets (P5.T6.1):** Tab trigger expands snippet, tabstops navigable, placeholders editable, 5+ built-in snippets per major language
+- [ ] **Column editing (P5.T6.2):** `Option+Shift+Drag` creates rectangular selection, paste N lines → N cursors, entire operation = single undo group
+- [ ] **Git gutter (P5.T6.4):** Green/blue/red markers in gutter, hover shows original, revert hunk works, debounced 500ms
+- [ ] **Sticky scroll (P5.T6.5):** Scope headers pinned at top (max 5), click → scroll to scope start, toggle via View menu
+- [ ] **Smart highlighting (P5.T6.21):** Select word → all visible occurrences highlighted within 100ms, distinct from Find highlights
+- [ ] **File handling edge cases (P5.T6.27):** All 12 edge cases from section 4.49 verified (including .git directory warning)
+- [ ] **Save behavior (P5.T6.28):** NSSavePanel default extension per syntax for all 30+ mappings, Save Copy As does not change active tab path
 
 **Depends on:** Phases 1-4
 
@@ -1636,7 +1666,9 @@ After all Phase 3 tasks are complete, verify:
 - [ ] "Edit JSON" opens file in editor
 - [ ] External edit of JSON → settings reload live
 
-**Depends on:** P2.T4 (window management), P5.T6 (feature integration), P5.T8 (theme system — required for "Changing theme → editor updates")
+**Depends on:** P2.T4 (window management), P5.T6 (feature integration), P5.T8 (theme system — must be implemented BEFORE preferences so theme switching works).
+
+**EXECUTION ORDER NOTE:** Implement P5.T8 (themes) BEFORE P5.T7 (preferences) despite numbering. Recommended Phase 5 execution order: P5.T1 → P5.T2 → P5.T3 → P5.T4 → P5.T5 → P5.T6 → P5.T8 → P5.T7.
 
 ---
 
@@ -1700,7 +1732,26 @@ After all Phase 3 tasks are complete, verify:
 - Verify mimalloc vs system allocator (benchmark, keep whichever is faster on M4)
 - Verify thermal throttling behavior (ProcessInfo.thermalState)
 
-**Acceptance criteria:** All targets from section 7.1 met. Benchmark results documented.
+**Acceptance criteria — ALL 17 metrics from section 7.1 must pass:**
+- [ ] Cold startup < 500ms
+- [ ] Warm startup: active tab < 200ms
+- [ ] Open 1MB file < 200ms
+- [ ] Open 100MB file < 2s (first screen < 200ms)
+- [ ] Open 1GB file < 10s (first screen < 200ms)
+- [ ] Open 1MB single line (minified JS) < 3s, no hang
+- [ ] Keystroke latency < 16ms
+- [ ] Scroll FPS >= 60 on M4
+- [ ] Search 10K files (literal) < 2s
+- [ ] Search 10K files (regex) < 5s
+- [ ] Autocomplete popup < 50ms after debounce
+- [ ] Memory idle < 50MB
+- [ ] Memory 50 tabs < 300MB
+- [ ] Auto-save < 50ms (< 100KB) / < 100ms (> 1MB)
+- [ ] Hot exit 50 tabs < 500ms
+- [ ] Tab switch < 30ms
+- [ ] Syntax highlight after edit < 50ms for viewport
+- [ ] File watcher response < 500ms
+- [ ] Benchmark results for ALL metrics documented in a results file
 
 **Depends on:** All previous phases
 
@@ -1922,7 +1973,7 @@ Every feature from the v1.0 matrix (65 features) maps to at least one task:
 | 22 | Zoom | P5.T6.12 |
 | 23 | Line operations | P5.T6.3 |
 | 24 | Auto-indent | P3.T4, P4.T3 |
-| 25 | Drag-and-drop | P5.T6.14 |
+| 25 | Drag-and-drop | P2.T4 (window drop target) — P5.T6.14 removed (already implemented in P2.T4) |
 | 26 | Session restore | P3.T3 |
 | 27 | Project support | P5.T2 |
 | 28 | File tree sidebar | P5.T1 |
@@ -1954,7 +2005,7 @@ Every feature from the v1.0 matrix (65 features) maps to at least one task:
 | 54 | Smart highlighting (auto-highlight selected word) | P5.T6.21 |
 | 55 | Case conversion commands | P5.T6.22 |
 | 56 | Document statistics | P5.T6.23 |
-| 57 | Save Copy As | P2.T4 (FileService) |
+| 57 | Save Copy As | P5.T6.28 (Save behavior details — implements saveCopyAs in FileService) |
 | 58 | Convert indentation | P5.T6.24 |
 | 59 | NSTextInputClient (IME, emoji, dictation) | P2.T3 (EditorView — CRITICAL) |
 | 60 | Paste and Indent | P3.T4 (keyboard input) |

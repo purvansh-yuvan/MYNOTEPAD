@@ -117,8 +117,8 @@ Pick the closest shape to your feature; copy its structure; diff your output aga
 pub enum EditorError {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
-    #[error("Encoding error: {source}")]
-    Encoding { source: encoding_rs::CoderResult },
+    #[error("Encoding error: {0}")]
+    Encoding(String),
     #[error("Rope error: {0}")]
     Rope(String),
     #[error("Syntax parsing error: {0}")]
@@ -182,8 +182,8 @@ Each platform maps `FfiResult` codes to localized error UI:
 | Macro list | In-memory on app start | On macro save/delete |
 | Plugin registry | In-memory on app start | On plugin install/remove |
 
-| Shaped text output | In-memory per (content, style, font) | On content/font change |
-| Line layout | In-memory per line | On line content change |
+| Shaped text output | In-memory per (tab_id, content, style, font) | On content/font change; bulk-evict on tab close |
+| Line layout | In-memory per (tab_id, line) | On line content change; bulk-evict on tab close |
 | Font metrics | In-memory per (font, size) | On font change |
 | Compiled regex patterns | LRU cache (50 entries) | LRU eviction |
 | Mount point capabilities | In-memory per mount point | On app restart |
@@ -244,6 +244,7 @@ Rules are numbered globally. The reviewer cites these numbers. **Load-bearing** 
 | 6 | **No `std::process::Command`** — core must never spawn processes | `grep -rn 'process::Command\\|Command::new' core/src/` — must be 0 hits |
 | 7 | **Every FFI-allocated resource has a `*_free()` function** | For each `pub extern "C" fn.*create\\|new\\|open` in `core/ffi/`, verify a matching `*_free` exists |
 | 8 | **FFI types are `#[repr(C)]` or opaque pointers** | `grep -rn 'pub struct' core/ffi/ --include='*.rs'` — each must have `#[repr(C)]` or be returned as `*mut c_void` |
+| 8b | **No `*const c_char` in FFI signatures** — strings must be `(*const u8, usize)` length-delimited | `grep -rn 'c_char' core/ffi/ --include='*.rs'` — must be 0 hits |
 
 ### Rust Core — Standards ◆
 
@@ -452,7 +453,7 @@ These are foundational decisions that affect every layer. Changing them later re
 - **Text shaping**: use CoreText (macOS/iOS), HarfBuzz (Linux), DirectWrite (Windows) for text shaping — handles ligatures (`->`, `=>`, `!=` in Fira Code), kerning, combining characters, and complex scripts (Arabic, Devanagari, CJK). Variable font axis interpolation supported.
 - **Glyph atlas**: rasterize each glyph once per `(glyph_id, font_id, size, subpixel_offset)` tuple → cache in a GPU texture atlas → reuse across frames. Color applied via shader, NOT baked into atlas. Invalidate only on font change. **Emoji/color glyphs**: use a separate RGBA texture atlas for color emoji (`sbix` format). Use `CTFontDrawGlyphs()` for rendering — standard grayscale atlas does NOT work for emoji.
 - **Glyph atlas eviction**: LRU page eviction when atlas exceeds 32MB. CJK text can produce thousands of unique glyphs — eviction prevents unbounded growth.
-- **Shaped text cache**: cache shaped output per (text_content, style, font) tuple. Segment by word/token boundaries for maximum reuse. LRU cache of 10,000 entries.
+- **Shaped text cache**: cache shaped output per (tab_id, text_content, style, font) tuple. Segment by word/token boundaries for maximum reuse. LRU cache of 10,000 entries. On tab close, bulk-evict all entries tagged with that tab's ID to prevent stale cache growth.
 - **Line layout cache**: cache each visible line's layout (character positions, advances, wrap points). Invalidate only when that specific line's content changes — never re-layout all 50 visible lines for a single-line edit.
 - **Font metric cache**: cache ascent, descent, line height, advance widths per font/size at font load time. CoreText calls for metrics are not free.
 - **Dirty rect rendering**: on edit, only re-render changed lines + cursor line. On scroll, only render newly visible lines. Never redraw entire viewport.
@@ -467,16 +468,19 @@ These are foundational decisions that affect every layer. Changing them later re
 │  Max budget per frame: 16ms (60 FPS)                │
 │  QoS: .userInteractive                              │
 ├─────────────────────────────────────────────────────┤
-│ RAYON THREAD POOL (CPU-bound — Rust core)           │
-│  Syntax parsing, search, diff, encoding detection   │
-│  Uses rayon::ThreadPool, work-stealing scheduler    │
-│  Pool size: P-core count (6 on M4)                  │
-│  Priority lanes: HIGH (visible viewport syntax)     │
-│                  NORMAL (search, diff)               │
-│                  LOW (background indexing)           │
-│  QoS: HIGH → .userInitiated                         │
-│        NORMAL → .utility                            │
-│        LOW → .background                            │
+│ RAYON HIGH POOL (CPU-bound — visible viewport)      │
+│  Syntax parsing for visible lines, bracket matching │
+│  Separate rayon::ThreadPool instance                │
+│  Pool size: 4 threads (P-cores on M4)               │
+│  QoS: .userInitiated                                │
+│  Routed via TaskDispatcher::High                    │
+├─────────────────────────────────────────────────────┤
+│ RAYON LOW POOL (CPU-bound — background)             │
+│  Search, diff, encoding detection, file indexing    │
+│  Separate rayon::ThreadPool instance                │
+│  Pool size: 2 threads (E-cores on M4)               │
+│  QoS: .utility (search/diff) / .background (index) │
+│  Routed via TaskDispatcher::Normal / ::Low          │
 ├─────────────────────────────────────────────────────┤
 │ LOCAL I/O THREAD POOL (2 threads)                    │
 │  Local file read/write, auto-save                   │
@@ -506,7 +510,18 @@ These are foundational decisions that affect every layer. Changing them later re
 **Rules:**
 - Main thread does ZERO file I/O, ZERO computation, ZERO blocking
 - All core function calls from UI go through async channels → result posted back to main thread
-- `rayon` for CPU-bound parallelism (syntax parsing, multi-file search, diff) — **two separate pools**: HIGH pool (4 threads on M4, `QOS_CLASS_USER_INITIATED` via `pthread_set_qos_class_self_np` in rayon `spawn_handler`) for visible viewport work, LOW pool (`QOS_CLASS_UTILITY`) for background indexing/search. Rayon does NOT automatically set QoS — you MUST configure it manually per thread.
+- `rayon` for CPU-bound parallelism (syntax parsing, multi-file search, diff) — **two separate `rayon::ThreadPool` instances** (NOT priority lanes on one pool): HIGH pool (4 threads on M4, `QOS_CLASS_USER_INITIATED` via `pthread_set_qos_class_self_np` in rayon `spawn_handler`) for visible viewport work, LOW pool (`QOS_CLASS_UTILITY`) for background indexing/search. Rayon does NOT automatically set QoS — you MUST configure it manually per thread.
+- **Task dispatcher**: all background work MUST be submitted through a `TaskDispatcher` that routes to the correct pool:
+  ```rust
+  pub enum TaskPriority { High, Normal, Low }
+  pub fn dispatch(priority: TaskPriority, task: impl FnOnce() + Send + 'static) {
+      match priority {
+          TaskPriority::High => HIGH_POOL.spawn(task),
+          TaskPriority::Normal | TaskPriority::Low => LOW_POOL.spawn(task),
+      }
+  }
+  ```
+  Never call `rayon::spawn()` directly (uses global pool with no QoS). Always use `dispatch()` with an explicit priority.
 - I/O thread pool (2-4 threads) for file operations — if one thread stalls on network FS, others continue
 - SQLite gets its own dedicated thread — never blocked by file I/O stalls
 - Every I/O operation has a 30-second hard timeout — stalled operations are abandoned, not retried indefinitely
@@ -520,7 +535,7 @@ These are foundational decisions that affect every layer. Changing them later re
 - **Writer produces new snapshot**: edit operations create a new root node sharing >99% of internal nodes with the previous version. O(log n) per edit.
 - **Single document owner (DocumentManager)**: the main thread is the SOLE writer for each document. Multiple views/windows send edit commands to the DocumentManager; it applies them sequentially and broadcasts new `Arc<Rope>` to all views. This eliminates race conditions between multi-window edits.
 - **Split views share the same logical document** — each view holds its own cursor/scroll state + the latest snapshot `Arc<Rope>`
-- **Snapshot lifecycle**: main thread publishes new snapshots via `Arc::swap`. Background threads hold their snapshot for the duration of their operation, then drop it. Old nodes freed when refcount hits zero. **Snapshot age limit**: if a background thread's snapshot is > 500ms old and the rope has advanced, cancel and re-snapshot (bounds divergence and memory).
+- **Snapshot lifecycle**: main thread publishes new snapshots via `Arc::swap`. Background threads hold their snapshot for the duration of their operation, then drop it. Old nodes freed when refcount hits zero. **Snapshot age limit**: if a background thread's snapshot is > 500ms old and the rope has advanced, cancel and re-snapshot (bounds divergence and memory). **Starvation guard**: if a background task (especially syntax parsing) is cancelled 3 consecutive times due to snapshot age expiry, the 4th attempt MUST run to completion regardless of snapshot age — this prevents rapid typing from starving syntax highlighting indefinitely, leaving the viewport without colors.
 - **Large rope deallocation**: if the main thread drops the last `Arc` to a large rope (e.g., closing a tab for a 1GB file), send the `Arc` to a background thread for deallocation to avoid blocking the main thread.
 - **Per-file save serialization**: only ONE save operation per file path at a time. If auto-save is in-flight and `Cmd+S` arrives, cancel the auto-save (`CancelToken`) and supersede with the manual save. Use a `DashMap<PathBuf, CancelToken>` to track active saves.
 - **Why not `RwLock<Rope>`**: RwLock causes contention when auto-save, search, and syntax parsing all compete for read locks during editing. Copy-on-write eliminates this entirely — no thread ever waits on another.
@@ -532,8 +547,8 @@ Every long-running background operation MUST accept a cancellation token:
 pub struct CancelToken(Arc<AtomicBool>);
 
 impl CancelToken {
-    pub fn cancel(&self) { self.0.store(true, Ordering::Relaxed); }
-    pub fn is_cancelled(&self) -> bool { self.0.load(Ordering::Relaxed) }
+    pub fn cancel(&self) { self.0.store(true, Ordering::Release); }
+    pub fn is_cancelled(&self) -> bool { self.0.load(Ordering::Acquire) }
 }
 ```
 - **Search**: check `is_cancelled()` between files. New search query cancels previous.
@@ -546,10 +561,10 @@ impl CancelToken {
 Background operations report progress via channel to main thread:
 ```rust
 pub enum Progress {
-    Indeterminate(String),           // "Loading file..."
-    Determinate(f64, String),        // 0.45, "Searching: 450/1000 files"
-    Complete(String),                // "Found 14 matches"
-    Error(String),                   // "Permission denied"
+    Indeterminate(String),           // operation key: "loading_file" (platform maps to localized string)
+    Determinate(f64, String),        // 0.45, "searching" (platform adds count context)
+    Complete(String),                // operation key: "search_complete" (platform localizes)
+    Error(EditorError),              // structured error — platform maps to localized user-facing message per i18n rules
     Cancelled,
 }
 ```
@@ -618,14 +633,17 @@ Tier 3: Recovery directory write
 
 **Continuous backup cleanup:**
 - On successful save to original: delete corresponding backup file
+- On tab close (named file with auto-save): file is already saved, delete corresponding backup directory immediately
+- On tab close (untitled file): hot exit has saved content to SQLite `unsaved_content` table, so delete the continuous backup directory for that doc_id immediately — the backup is redundant once SQLite has the data
 - On startup: scan backups/ — restore if newer than original, delete if stale (>7 days)
 - Temp file naming: `{filename}.mynotepadpp-{pid}-{timestamp}.tmp` — orphans detectable by dead PID
 - Cleanup on startup + every 1 hour: delete orphaned temp files older than 1 hour
 
-**Auto-save race condition with file watcher:**
-- **Use `kFSEventStreamEventFlagOwnEvent`** (macOS API) to detect events caused by our own process — most reliable suppression method.
-- Fallback (if flag unavailable): store the mtime we wrote. On file watcher event, compare current mtime to our last write mtime. If they match, suppress. If they differ, it was an external change — do NOT suppress.
-- **Do NOT use a boolean flag** — a boolean flag can incorrectly suppress genuine external changes that arrive during the 500ms window.
+**Auto-save race condition with file watcher (unified suppression strategy):**
+Priority chain for detecting self-writes (use the highest available):
+1. **`kFSEventStreamEventFlagOwnEvent`** (macOS 13.0+ / FSEvents API) — detect events caused by our own process. Most reliable; no timing windows.
+2. **Mtime comparison** (fallback for macOS < 13.0): on every successful save, record `(path, mtime_written)` in a `HashMap`. On file watcher event, compare the current file mtime against our recorded mtime. If they match → suppress (our write). If they differ → external change, do NOT suppress. The mtime record expires after 2 seconds (covers fsync delay + filesystem granularity).
+3. **Do NOT use a boolean flag or fixed-duration suppression window** — a boolean/time-based flag can incorrectly suppress genuine external changes that arrive during the window.
 
 ### 7. Shutdown & Close Behavior (NEVER prompts, NEVER loses data)
 
@@ -643,7 +661,8 @@ Tier 3: Recovery directory write
 - On reopen (click Dock): restore from SQLite.
 
 **Quit app (`Cmd+Q`):**
-- Set `isShuttingDown = true` guard flag (rejects new file opens during shutdown).
+- Set `isShuttingDown` atomic flag to `true` (same `AtomicBool` used in Thread Shutdown Ordering — store with `Ordering::Release`, read with `Ordering::Acquire`). Rejects new file opens during shutdown. Swift side reads this via an FFI function `mynotepadpp_is_shutting_down() -> bool`, NOT a separate Swift Bool.
+- Cancel all in-flight auto-save AND continuous backup operations via CancelToken (prevents them from holding `Arc<Rope>` snapshots during shutdown).
 - Hot exit saves ALL state in ONE `BEGIN IMMEDIATE` SQLite transaction:
   - Tab states: ~5ms for 50 UPSERTs (prepared cached statements)
   - Unsaved content for untitled files: zstd-compressed, ~50ms
@@ -688,7 +707,7 @@ Tier 3: Recovery directory write
 - **macOS: FSEvents** (not kqueue — FSEvents handles moved/renamed directories correctly)
 - **Debouncing**: 200ms window — coalesce all events for the same file within the window
 - **Scope**: watch only open files + project root (if project mode). Never watch `node_modules` or `.git/objects`.
-- **Self-write suppression**: auto-save sets a 500ms suppress flag per file path (see Auto-Save section)
+- **Self-write suppression**: uses the unified suppression strategy from Auto-Save section §6 (`kFSEventStreamEventFlagOwnEvent` primary, mtime comparison fallback — never a boolean flag)
 - **Delivery**: events delivered to I/O thread → compared against suppress list → if genuine external change, post to main thread → prompt user
 
 ### 9. Undo/Redo Memory Management
@@ -747,10 +766,33 @@ Tier 3: Recovery directory write
 ### Apple Silicon (M4) Specific
 - Build universal binaries (`arm64` + `x86_64`) for distribution, but optimize for `arm64`
 - **Metal for glyph rendering**: rasterize glyph atlas on GPU, composite text layers via Metal. Falls back to CoreGraphics if Metal unavailable.
+- **Metal shader pre-compilation**: all Metal Pipeline State Objects (PSOs) MUST be compiled during app startup (before first frame) using a pre-compiled `.metallib` bundled in the app bundle. Never compile shaders at runtime — first-frame PSO compilation causes a 50-100ms hitch. Use `MTLDevice.makeRenderPipelineState()` asynchronously during the startup waterfall (between T+0ms and T+100ms).
 - Leverage Unified Memory architecture — glyph atlas shared between CPU/GPU without copy
 - Energy efficiency: use `QoS` classes (`.userInteractive` for rendering, `.userInitiated` for visible viewport syntax highlighting, `.utility` for search/auto-save, `.background` for file indexing/plugins). Never poll — use FSEvents, GCD timers, or `kqueue`.
 - Thermal throttling: check `ProcessInfo.thermalState` — reduce rayon parallelism at `.serious` or `.critical`
 - App Nap: assert `ProcessInfo.beginActivity(options: [.userInitiated])` while documents are dirty. Release assertion when all documents are saved.
+
+### Frame Budget Watchdog (Debug Builds)
+In debug builds, measure each frame's phases and log warnings:
+- **Budget**: 16ms total per frame (60 FPS). Breakdown: input ~1ms, rope edit ~0.1ms, layout ~2ms, glyph atlas lookup ~1ms, Metal draw ~3ms, buffer swap ~1ms, syntax query ~8ms remaining.
+- **Watchdog**: if any frame exceeds 14ms, log which phase was slow (`tracing::warn!`). If syntax highlight query for the current frame exceeds 8ms, **drop syntax colors for that frame** (render plain text) rather than dropping below 60 FPS. The next frame will apply colors from the completed parse.
+- **Release builds**: no watchdog overhead. The "drop colors if slow" behavior is always active (it's a render-time check, not a profiling timer).
+
+### Minimap Rendering Thread Synchronization
+The minimap is rendered on a background thread and composited on the main thread. Use a **double-buffer pattern** to avoid lock contention:
+1. Background thread renders the minimap into CPU-side buffer A.
+2. On completion, atomically swap the buffer pointer from A to B (using `Arc::swap` or `AtomicPtr`).
+3. Main thread reads from whichever buffer the pointer currently references on next frame — no lock, no wait.
+4. If the background thread hasn't finished a new render when the main thread needs it, the main thread uses the previous (stale) buffer — this is acceptable because minimap is low-fidelity.
+
+### Runtime Memory Budget Enforcement
+Monitor the app's RSS (Resident Set Size) and enforce the 300MB budget at runtime:
+- **Check interval**: every 10 seconds via a lightweight timer (not polling — use `DispatchSource.makeTimerSource()`)
+- **At 250MB RSS**: begin proactive eviction — purge undo history for non-active tabs to last 10 operations, drop syntax trees for non-visible tabs (reload on tab switch)
+- **At 300MB RSS**: aggressive eviction — purge shaped text cache entirely, purge glyph atlas to visible glyphs only, drop all non-active tab syntax trees and line layout caches
+- **At 350MB RSS** (critical): show status bar warning: "High memory usage. Close some tabs to free memory." Refuse to open new files until RSS drops below 300MB (user can still switch between existing tabs).
+- **Measurement**: use `mach_task_info` / `task_info()` to read RSS on macOS. This is a lightweight syscall (~1µs).
+- This is in ADDITION to the `DispatchSource` memory pressure handler (which responds to system-wide pressure, not just this app's usage).
 
 ### SQLite Fine-Tuning
 
@@ -784,7 +826,7 @@ PRAGMA journal_mode = WAL;
 PRAGMA synchronous = FULL;                -- NORMAL is unsafe on macOS (fsync is no-op for durability)
 PRAGMA fullfsync = ON;                    -- force F_FULLFSYNC on macOS (true NVMe cache flush)
 PRAGMA cache_size = -2000;                -- 2MB page cache
-PRAGMA mmap_size = 33554432;              -- 32MB (not 256MB — sufficient for session DB)
+PRAGMA mmap_size = 33554432;              -- 32MB for session DB only. NOTE: this is SQLite's internal mmap (safe — SQLite handles SIGBUS internally via xFetch error handling), NOT the raw mmap forbidden for user files in the file-loading section.
 PRAGMA temp_store = MEMORY;               -- temp tables in memory
 PRAGMA busy_timeout = 5000;               -- 5s retry on lock
 PRAGMA wal_autocheckpoint = 1000;         -- checkpoint every ~4MB of WAL
@@ -833,6 +875,7 @@ PRAGMA wal_checkpoint(TRUNCATE);      -- minimize DB file size
 
 ### Metal GPU Resource Cleanup
 - **Glyph atlas**: `MTLTexture` released on font change, theme change, and when app enters background. 32MB LRU cap with page eviction. Separate RGBA atlas for color emoji.
+- **Glyph atlas tab-close compaction**: after closing a tab, schedule a deferred atlas compaction (debounced 5 seconds). The compaction scans all open tabs' visible viewports to build a "live glyph set," then evicts atlas pages containing only glyphs NOT in the live set. This prevents unused CJK/emoji glyphs from consuming atlas space after their tab is closed.
 - **Command buffers**: `MTLCommandBuffer` completion handler MUST release drawable references. Never hold `CAMetalDrawable` across frames (Apple limit: 3 drawables).
 - **Display scale change**: invalidate glyph atlas when `contentsScale` changes (window dragged between Retina and non-Retina displays).
 
@@ -849,16 +892,16 @@ PRAGMA wal_checkpoint(TRUNCATE);      -- minimize DB file size
 
 ### Thread Shutdown Ordering
 On quit (Cmd+Q / SIGTERM):
-1. Set `isShuttingDown = true` (global atomic flag)
-2. Cancel all background operations via CancelToken
+1. Set `isShuttingDown = true` (global `AtomicBool`, **use `Ordering::Release` on store, `Ordering::Acquire` on load** — `Relaxed` is insufficient on ARM64 weak memory ordering; other threads may not see the flag promptly)
+2. Cancel all background operations via CancelToken — this includes in-progress auto-save AND continuous backup operations (backup writes to a different path but holds `Arc<Rope>` snapshots that block large rope deallocation)
 3. I/O threads: check `isShuttingDown` on each loop — use 1-second timeout (not 30s) during shutdown
 4. SQLite writer: flush pending writes, `wal_checkpoint(TRUNCATE)`, close connection
-5. rayon pools: do NOT join — let OS reclaim threads on process exit
+5. rayon pools: do NOT join — let OS reclaim threads on process exit. **Verify no rayon-pooled task holds resources with meaningful `Drop` behavior beyond memory deallocation** (e.g., temp file deletion). If any do, move that cleanup to step 2's CancelToken handler.
 6. If step 3-4 exceeds 3 seconds: force `std::process::exit(0)` — critical data is already saved
 
 ### Swift 6 Strict Concurrency
 - Enable `SWIFT_STRICT_CONCURRENCY = complete` in Xcode project
-- `EditorCore` (FFI bridge): mark as `@unchecked Sendable` (wraps thread-safe Rust pointer)
+- `EditorCore` (FFI bridge): mark as `@unchecked Sendable` (wraps thread-safe Rust pointer). **Thread-safety audit requirement**: `EditorCore` MUST NOT cache any mutable state on the Swift side (e.g., last FFI result, cached line count). All mutable state lives in the Rust core behind the opaque pointer (which is thread-safe by Rust's ownership model). If Swift-side caching is ever needed, route all access through a dedicated serial `DispatchQueue` or convert `EditorCore` to an `actor`. The `@unchecked Sendable` conformance is only sound if the Swift wrapper is truly stateless beyond the opaque pointer.
 - All UI code: `@MainActor` isolated
 - Services (`FileService`, `ThemeManager`, `AutoSaveService`): declare explicit actor isolation
 - Set `SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated` to prevent C FFI functions from being implicitly `@MainActor`
@@ -884,6 +927,8 @@ On quit (Cmd+Q / SIGTERM):
 - Plugin system (future): sandboxed execution, explicit permission grants
 - **Recovery/backup file security**: set file permissions to `0600` on all recovery, backup, and SQLite files immediately after creation. Consider encrypting recovery files with AES-256 key stored in Keychain.
 - **Clipboard history security**: respect `org.nspasteboard.TransientType` and `org.nspasteboard.ConcealedType` pasteboard flags. Do NOT store clipboard entries with these flags. Auto-expire clipboard history after 5 minutes. Never persist to disk. Plugins MUST NOT have access to clipboard history.
+- **Clipboard access policy (macOS 15+ Sequoia)**: macOS Sequoia shows a permission prompt on clipboard read. To avoid repeated prompts, ONLY access the clipboard on explicit user actions: `Cmd+V` (paste), `Cmd+E` (use selection for find), `Cmd+Shift+V` (paste and indent), and clipboard history ring (v1.1, user-initiated). NEVER poll or proactively read the clipboard for autocomplete, smart highlighting, or any background feature.
+- **Symlink loop detection**: when enumerating directory trees (sidebar file tree, Find in Files, project indexing), track visited inode numbers (`FileManager.attributesOfItem(atPath:)[.systemFileNumber]`). If an inode is visited twice during the same enumeration, stop recursion for that branch and display a "(symlink loop)" indicator in the sidebar. This prevents infinite recursion from circular symlinks (e.g., `a → b → a`).
 
 ### Rust Core
 - `#[forbid(unsafe_code)]` at crate root — lift to `#[allow(unsafe_code)]` only in specific modules with justification
@@ -894,7 +939,7 @@ On quit (Cmd+Q / SIGTERM):
 ### Platform Specific
 - macOS: Hardened Runtime enabled, notarized for distribution. **No `com.apple.security.cs.allow-jit` entitlement** — use wasmtime Pulley interpreter for plugins.
 - macOS App Sandbox: **Integrated terminal (v1.1) is incompatible with App Sandbox.** Terminal must be excluded from Mac App Store build. Offer terminal only in direct-download (Homebrew/DMG) distribution, or use "Open in Terminal.app" as a safe alternative.
-- macOS security-scoped bookmarks: implement reference counting for directory access (start on first file open in dir, stop on last close). Kernel limit of ~1000-2500 active accesses — exceeding this loses ALL file access until restart.
+- macOS security-scoped bookmarks: implement reference counting for directory access (start on first file open in dir, stop on last close). Kernel limit of ~250 active accesses (conservative safe ceiling) — exceeding this loses ALL file access until restart. **Degradation UX**: track active bookmark count. At 200 active accesses, show a non-blocking status bar warning: "Many directories open. Close some projects to avoid file access issues." At 240, show a persistent banner: "File access limit approaching. Close unused project folders." At 250 (limit hit), fall back to `NSOpenPanel` for each file access (user must re-grant per file). Never silently fail.
 - macOS Xcode 26+: set `SWIFT_DEFAULT_ACTOR_ISOLATION=nonisolated` to prevent C FFI functions from being implicitly `@MainActor`-isolated (breaks background thread FFI calls).
 - Windows: Code signing for MSIX distribution
 - Linux: Flatpak with minimal permissions
@@ -907,7 +952,7 @@ On quit (Cmd+Q / SIGTERM):
 
 - **Core library**: semver (`MAJOR.MINOR.PATCH`). Bump `MAJOR` on FFI-breaking changes, `MINOR` on new FFI endpoints, `PATCH` on bug fixes.
 - **Platform apps**: `MAJOR.MINOR.PATCH` — all platforms share the same version number. When Linux ships with the same features as macOS v1.1, it launches as v1.1.0 (not v1.0 or v2.0). Each platform documents which core version it links against in its version metadata.
-- **Core ↔ App compatibility**: the core exposes a `uint32_t mynotepadpp_core_api_version(void)` function. Platform apps check this at startup and refuse to load an incompatible core.
+- **Core ↔ App compatibility**: the core exposes a `uint32_t mynotepadpp_core_api_version(void)` FFI function (must have `catch_unwind` like all FFI exports per Rule #3). Platform apps check this at startup and refuse to load an incompatible core.
 - **Version source of truth**: `core/Cargo.toml` `version` field for the core; platform-native version files (`Info.plist`, `build.gradle.kts`, `.csproj`, `Cargo.toml`) for apps.
 - **Git tags**: `core-v1.2.3`, `macos-v1.1.0`, `linux-v1.1.0`, etc. One tag per artifact.
 - **CHANGELOG.md**: maintained in repo root using [Keep a Changelog](https://keepachangelog.com/) format. Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`. Drives App Store "What's New" text.
@@ -1012,7 +1057,7 @@ All platforms must expose equivalent functionality via their native UI patterns 
 Plugins extend editor functionality without modifying core code. The plugin system prioritizes **security** and **stability** over flexibility.
 
 ### Sandboxing
-- Plugins run in a **WebAssembly (WASM) sandbox** using `wasmtime` with the **Pulley interpreter** backend (NOT Cranelift JIT). Pulley avoids the `com.apple.security.cs.allow-jit` entitlement required by JIT, which weakens Hardened Runtime. Pulley is ~10x slower than native compilation but acceptable given the 100ms CPU budget per event handler. This also eliminates the entire class of Cranelift miscompilation vulnerabilities (e.g., CVE-2026-34971 aarch64 sandbox escape).
+- Plugins run in a **WebAssembly (WASM) sandbox** using `wasmtime` with the **Pulley interpreter** backend (NOT Cranelift JIT). Pulley avoids the `com.apple.security.cs.allow-jit` entitlement required by JIT, which weakens Hardened Runtime. Pulley is ~10x slower than native compilation but acceptable given the 100ms CPU budget per event handler. This also eliminates the entire class of Cranelift JIT miscompilation vulnerabilities that could lead to sandbox escapes on aarch64.
 - Plugins CANNOT: access the filesystem directly, make network calls, spawn processes, or access memory outside their sandbox
 - Plugins CAN: read/modify buffer content (via host-provided API), register commands to the Command Palette, add syntax highlighting rules, register custom themes, display text in a status bar segment, respond to editor events (file open, save, cursor move)
 - All capabilities require explicit **permission grants** declared in the plugin manifest
@@ -1039,7 +1084,7 @@ events = ["on_save", "on_open"]
 
 ### Directory Layout
 ```
-~/.mynotepadpp/plugins/
+<config-dir>/plugins/
 ├── my-plugin/
 │   ├── plugin.toml
 │   └── plugin.wasm
@@ -1047,7 +1092,11 @@ events = ["on_save", "on_open"]
     ├── plugin.toml
     └── plugin.wasm
 ```
-Platform-specific paths follow the same convention as macros (Application Support, XDG, AppData, app container).
+Platform-specific paths (must be within sandbox-accessible directories):
+- macOS: `~/Library/Application Support/mynotepadpp/plugins/`
+- Linux: `$XDG_DATA_HOME/mynotepadpp/plugins/` (`~/.local/share/` fallback)
+- Windows: `%APPDATA%\mynotepadpp\plugins\`
+- iOS/Android: app container internal storage
 
 ### Rules
 1. **GPL v3 compatibility required** — plugins must declare their license in the manifest; non-GPL-compatible licenses are rejected at install
@@ -1059,7 +1108,9 @@ Platform-specific paths follow the same convention as macros (Application Suppor
 
 ---
 
-## REMOTE FILE ACCESS (SFTP / FTPS)
+## REMOTE FILE ACCESS (SFTP / FTPS) — v1.1 ONLY
+
+**IMPORTANT**: This entire section is v1.1 scope. Do NOT implement in v1.0. The `com.apple.security.network.client` entitlement MUST be added to the entitlements file when (and only when) SFTP code ships. Without it, App Sandbox silently blocks all outbound connections.
 
 ### Protocols
 - **SFTP** (SSH File Transfer Protocol) — primary, recommended
@@ -1088,7 +1139,7 @@ Platform UI → Remote Service (SFTP/FTPS client) → download to temp file → 
 7. **Offline resilience** — if connection drops mid-session, the local temp copy remains editable; user is warned and can retry upload
 8. **No remote browsing in v1** — user provides a full remote path; a remote file browser is a future enhancement
 9. **Platform libraries**:
-   - macOS/iOS: `NMSSH` or `libssh2` via Swift wrapper
+   - macOS/iOS: `libssh2` via Swift C interop wrapper (NOT `NMSSH` — unmaintained since 2019, no async/await support)
    - Linux: `libssh2` (Rust crate `ssh2`)
    - Windows: `SSH.NET` or `libssh2` via P/Invoke
    - Android: `JSch` or `sshj` (Kotlin)
@@ -1103,7 +1154,7 @@ Platform UI → Remote Service (SFTP/FTPS client) → download to temp file → 
 
 ### Security
 - All connections use TLS 1.2+ (FTPS) or SSH v2 (SFTP) — no fallback to insecure protocols
-- Host key verification: first-connection prompt to trust, then pin in known_hosts
+- Host key verification: first-connection prompt to trust ("Connect to [host]? Fingerprint: SHA256:..."), then pin in known_hosts. **Storage location**: `~/Library/Application Support/mynotepadpp/ssh/known_hosts` (within App Sandbox container). Format: OpenSSH `known_hosts` compatible (one line per host: `hostname algorithm base64key`). On first launch, if the user has granted access to `~/.ssh/` via Open panel, offer to import existing `~/.ssh/known_hosts` entries — but do NOT require or automatically access `~/.ssh/`.
 - Session timeout: configurable idle disconnect (default 15 minutes)
 
 ---
@@ -1138,7 +1189,7 @@ Diff computation runs in the Rust core using the `similar` crate. Algorithm sele
 
 ### Core API
 ```rust
-pub fn compute_diff(old: &Rope, new: &Rope, options: DiffOptions) -> Vec<DiffHunk>;
+pub fn compute_diff(old: &Rope, new: &Rope, options: DiffOptions, cancel: &CancelToken) -> Result<Vec<DiffHunk>, EditorError>;
 
 pub struct DiffHunk {
     pub kind: DiffKind,          // Added, Removed, Modified
@@ -1197,7 +1248,7 @@ Syntax highlighting themes must provide both light and dark variants.
 |----------|-----------|
 | Rust Core | `tracing` crate with `tracing-subscriber` |
 | macOS/iOS | `os_log` (unified logging) via `OSLog` |
-| Android | `android.util.Log` / Timber |
+| Android | Timber only (`android.util.Log` forbidden by Rule #35) |
 | Windows | `ILogger` / Debug output |
 | Linux | `tracing` (same as core, since it's Rust) |
 
